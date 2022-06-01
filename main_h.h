@@ -585,6 +585,14 @@ public:
 };
 
 
+/*
+senior_warrior = Type_Warrior_OP, // старший воин
+elite_anomal, // элитный аномальный воин
+advanced, // продвинутый воин
+legendary_legend, // легендарный легенда воин
+ordinary_warrier, // обычный воин
+usual_absent_minded, // обычный рассеянный воин
+*/
 
 //КЛАСС ВОИН-------------------------------------------------------------------------------
 class Warrior: virtual public Base {
@@ -595,10 +603,8 @@ public:
     Warrior(int h = 0, int p = 0, int d = 0, int cb = 0, int ct = 0, Type t = warrior):
         Base(h, p, d), count_bite(cb), count_targets(ct) {
         setT(t);
-//        cout << "\nWarrior";
     }
     virtual ~Warrior() {
-//        cout << "\n~Warrior";
     }
 
     int& getCountBite() {return count_bite;}
@@ -606,8 +612,8 @@ public:
     virtual bool attacked(int damage) { return Base::attacked(damage);}
     virtual void show() = 0;
     void show_2() {
-        cout << "count_bite: " << setw(3) << left  << count_bite
-             << " count_targets: " << setw(3) << left  << count_targets;
+        cout << "Кол-во укусов: " << setw(3) << left  << count_bite
+             << " Кол-во целей: " << setw(3) << left  << count_targets;
     }
     virtual void setBT() = 0;
 };
