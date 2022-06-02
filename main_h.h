@@ -566,6 +566,11 @@ public:
     void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& workers) {
         auto it = workers.begin();
         for(size_t i = 0; i < v.size(); ++i) {
+            if(res.find(v.at(i)) == res.end()) return;
+            if(res[v.at(i)] == 0) {
+                resources[v.at(i)] += count_canTake;
+                return ;
+            }
             int a = resources[v.at(i)];
             if(res.find(v.at(i)) == res.end()) continue;
             res[v.at(i)] -= count_canTake;
@@ -577,7 +582,6 @@ public:
             if(a != resources[v.at(i)]) break;
         }
 
-        // реализовать нахождение ресурсы даже если его нет (взять от медведки)!!! ----------------------------!!!
         // реализовать игнорирование модификаторов !!!!!---------------------------------------------------------!!!
         // реализовать игнорирование атак любых типов!!!-------------------------------------!!!
 
@@ -590,7 +594,7 @@ senior_warrior = Type_Warrior_OP, // старший воин
 elite_anomal, // элитный аномальный воин
 advanced, // продвинутый воин
 legendary_legend, // легендарный легенда воин
-ordinary_warrier, // обычный воин
+ordinary_warrier, // обычный воин +
 usual_absent_minded, // обычный рассеянный воин
 */
 
@@ -618,20 +622,18 @@ public:
     virtual void setBT() = 0;
 };
 
-class SeniorWarrier: public Warrior {
+class Ordinary: public Warrior {
 public:
 #define B 1
 #define T 1
-    SeniorWarrier(int health = 2, int protection = 1, int damage = 2, int cb = 1, int ct = 1):
-        Base(health, protection, damage),
-        Warrior::Warrior(health, protection, damage, cb, ct, senior_warrior) {
-//        cout << "\nSeniorWarrier";
+    Ordinary(int health = 1, int protection = 0, int damage = 1, int cb = 1, int ct = 1):
+            Base(health, protection, damage),
+            Warrior::Warrior(health, protection, damage, cb, ct, ordinary_warrier) {
     }
-    ~SeniorWarrier() {
-//        cout << "\n~SeniorWarrier";
+    ~Ordinary() {
     }
     void show() {
-        cout << setw(25) << left << "SeniorWarrier: "; Base::show(); Warrior::show_2();
+        cout << setw(25) << left << "Обычный воин: "; Base::show(); Warrior::show_2();
         cout << endl;
     }
     void setBT() {
@@ -642,20 +644,18 @@ public:
 #undef T
 };
 
-class Ordinary: public Warrior {
+class LegendaryLegend: public Warrior {
 public:
 #define B 1
-#define T 1
-    Ordinary(int health = 1, int protection = 0, int damage = 1, int cb = 1, int ct = 1):
-        Base(health, protection, damage),
-        Warrior::Warrior(health, protection, damage, cb, ct, ordinary_warrier) {
-//        cout << "\nOrdinary";
+#define T 3
+    LegendaryLegend(int health = 10, int protection = 6, int damage = 4, int cb = 1, int ct = 3):
+            Base(health, protection, damage),
+            Warrior::Warrior(health, protection, damage, cb, ct, legendary_legend) {
     }
-    ~Ordinary() {
-//        cout << "\n~Ordinary";
+    ~LegendaryLegend() {
     }
     void show() {
-        cout << setw(25) << left << "Ordinary: "; Base::show(); Warrior::show_2();
+        cout << setw(25) << left << "Легендарный легенда воин: "; Base::show(); Warrior::show_2();
         cout << endl;
     }
     void setBT() {
@@ -668,18 +668,16 @@ public:
 
 class Advanced: public Warrior {
 public:
-#define B 2
-#define T 1
-    Advanced(int health = 6, int protection = 2, int damage = 3, int cb = 2, int ct = 1):
-        Base(health, protection, damage),
-        Warrior::Warrior(health, protection, damage, cb, ct, advanced) {
-//        cout << "\nAdvanced";
+#define B 1
+#define T 2
+    Advanced(int health = 6, int protection = 2, int damage = 3, int cb = 1, int ct = 2):
+            Base(health, protection, damage),
+            Warrior::Warrior(health, protection, damage, cb, ct, advanced) {
     }
     ~Advanced() {
-//        cout << "\n~Advanced";
     }
     void show() {
-        cout << setw(25) << left << "Advanced: "; Base::show(); Warrior::show_2();
+        cout << setw(25) << left << "Продвинутый воин: "; Base::show(); Warrior::show_2();
         cout << endl;
     }
     void setBT() {
@@ -690,20 +688,18 @@ public:
 #undef T
 };
 
-class Elite_hero: public Warrior {
+class EliteAnomal: public Warrior {
 public:
 #define B 2
 #define T 2
-    Elite_hero(int health = 8, int protection = 4, int damage = 5, int cb = 2, int ct = 2):
-        Base(health, protection, damage),
-        Warrior::Warrior(health, protection, damage, cb, ct, elite_anomal) {
-//        cout << "\nElite_hero";
+    EliteAnomal(int health = 8, int protection = 4, int damage = 5, int cb = 2, int ct = 2):
+            Base(health, protection, damage),
+            Warrior::Warrior(health, protection, damage, cb, ct, elite_anomal) {
     }
-    ~Elite_hero() {
-//        cout << "\n~Elite_hero";
+    ~EliteAnomal() {
     }
     void show() {
-        cout << setw(25) << left << "Elite_hero: "; Base::show(); Warrior::show_2();
+        cout << setw(25) << left << "Элитный аномальный воин: "; Base::show(); Warrior::show_2();
         cout << endl;
     }
     void setBT() {
@@ -714,20 +710,18 @@ public:
 #undef T
 };
 
-class Senior_berserker: public Warrior {
+class SeniorWarrior: public Warrior {
 public:
 #define B 1
 #define T 1
-    Senior_berserker(int health = 2, int protection = 1, int damage = 2, int cb = 1, int ct = 1):
+    SeniorWarrior(int health = 2, int protection = 1, int damage = 2, int cb = 1, int ct = 1):
         Base(health, protection, damage),
-        Warrior::Warrior(health, protection, damage, cb, ct, legendary_legend) {
-//        cout << "\nSenior_berserker";
+        Warrior::Warrior(health, protection, damage, cb, ct, senior_warrior) {
     }
-    ~Senior_berserker() {
-//        cout << "\n~Senior_berserker";
+    ~SeniorWarrior() {
     }
     void show() {
-        cout << setw(25) << left << "Senior_berserker: "; Base::show(); Warrior::show_2();
+        cout << setw(25) << left << "Старший воин: "; Base::show(); Warrior::show_2();
         cout << endl;
     }
     void setBT() {
@@ -737,6 +731,37 @@ public:
 #undef B
 #undef T
 };
+
+class UsualAbsentMinded: public Warrior {
+public:
+#define B 1
+#define T 1
+    UsualAbsentMinded(int health = 1, int protection = 0, float damage = 0.5, int cb = 1, int ct = 1):
+            Base(health, protection, damage),
+            Warrior::Warrior(health, protection, damage, cb, ct, usual_absent_minded) {
+    }
+    ~UsualAbsentMinded() {
+    }
+    void show() {
+        cout << setw(25) << left << "Обычный рассеянный воин: "; Base::show(); Warrior::show_2();
+        cout << endl;
+    }
+    void setBT() {
+        count_bite = B;
+        count_targets = T;
+    }
+#undef B
+#undef T
+};
+
+
+/*
+ * butterfly = Type_Insect_OP, // бабочка
+    thick_legged, // толстоножка
+    wasp, // оса
+ */
+
+
 
 
 //КЛАСС СПЕЦИАЛЬНЫЕ НАСЕКОМЫЕ--------------------------------------------------------------
@@ -747,83 +772,87 @@ public:
         Base(h, p, d),
         Warrior::Warrior(h, p, d, cb, ct) , Worker::Worker(h, p, canTake, v) {
         setT(t);
-//        cout << "\nSpecialInsect";
     }
     virtual ~SpecialInsect() {
-//        cout << "\n~SpecialInsect";
     }
 
-    bool isWarrier() { return count_bite == 0 ? false : true;}
-    virtual bool attacked(int damage) { return Warrior::attacked(damage);}
+    bool attacked(int damage) { return Warrior::attacked(damage);}
     virtual void show() = 0;
+};
+
+class ThickLegged: public SpecialInsect {
+public:
+#define B 3
+#define T 3
+    ThickLegged(int health = 17, int protection = 9, int damage = 10,
+                int canTake = 0, std::vector<Resources> v = {}, int cb = 3, int ct = 3):
+            Base(health, protection, damage),
+            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, thick_legged) {
+    }
+    ~ThickLegged() {
+    }
+
+    bool attacked(int damage) { return Warrior::attacked(damage);}
+    void show() {
+        cout << setw(25) << left << "Ленивый обычный агрессивный феникс - Толстоножка: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << endl;
+    }
+    void setBT() {
+        count_bite = B;
+        count_targets = T;
+    }
+
+#undef B
+#undef T
 };
 
 class Butterfly: public SpecialInsect {
 public:
-#define B 0
-#define T 0
-    Butterfly(int health = 18, int protection = 17, int damage = 0,
-              int canTake = 0, std::vector<Resources> v = {}, int cb = 0, int ct = 0):
+#define B 2
+#define T 3
+    Butterfly(int health = 22, int protection = 9, int damage = 9,
+              int canTake = 0, std::vector<Resources> v = {}, int cb = 2, int ct = 3):
         Base(health, protection, damage),
         SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, butterfly) {
-//        cout << "\nButterfly";
     }
     ~Butterfly() {
-//        cout << "\n~Butterfly";
     }
     bool attacked(int damage) { return Warrior::attacked(damage);}
     void show() {
-        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << setw(25) << left << "Ленивый обычный агрессивный гибкий - Бабочка: "; Base::show(); Warrior::show_2(); Worker::show_2();
         cout << endl;
     }
     void setBT() {
         count_bite = B;
         count_targets = T;
     }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        return;
-    }
+
 #undef B
 #undef T
 
 };
 
-class Mole_cricket: public SpecialInsect {
+class Waspn: public SpecialInsect {
 public:
 #define B 0
 #define T 0
-    Mole_cricket(int health = 23, int protection = 9, int damage = 0,
-                 int canTake = 2, std::vector<Resources> v = {dewdrop}, int cb = 0, int ct = 0):
-        Base(health, protection, damage),
-        SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, thick_legged) {
-//        cout << "\nMole_cricket";
+    Waspn(int health = 29, int protection = 9, int damage = 5,
+                int canTake = 2, std::vector<Resources> v = {dewdrop}, int cb = 1, int ct = 3):
+            Base(health, protection, damage),
+            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, wasp) {
     }
-    ~Mole_cricket() {
-//        cout << "\n~Mole_cricket\n";
+    ~Waspn() {
     }
-    bool attacked(int damage) { return Warrior::attacked(damage);}
+
     void show() {
-        cout << setw(25) << left << "Mole_cricket: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << setw(25) << left << "Ленивый неуязвимый агрессивный заботливый - Оса: "; Base::show(); Warrior::show_2(); Worker::show_2();
         cout << endl;
     }
     void setBT() {
         count_bite = B;
         count_targets = T;
     }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        int i = 0;
-        if(res.find(v.at(i)) == res.end()) return;
-        if(res[v.at(i)] == 0) {
-            resources[v.at(i)] += count_canTake;
-            return ;
-        }
-        res[v.at(i)] -= count_canTake;
-        resources[v.at(i)] += count_canTake;
-        if(res[v.at(i)] < 0) {
-            resources[v.at(i)] += res[v.at(i)];
-            res[v.at(i)] = 0;
-        }
-    }
+
 #undef B
 #undef T
 };
@@ -831,18 +860,18 @@ public:
 
 
 
-class Tropic{
+class Ragnarok{
 public:
-#define TropicDay 5
+#define RagnarDay 5
 #define EffectDay 3
-    int day = TropicDay;
+    int day = RagnarDay;
     int ef_day = EffectDay;
     bool flag = false;
     void dopEffect(shared_ptr<Empire>& e);
     void revers(shared_ptr<Empire>& e);
-    void setTD() { day = TropicDay;}
+    void setTD() { day = RagnarDay;}
     void setED() { ef_day = EffectDay;}
-#undef TropicDay
+#undef RagnarDay
 #undef EffectDay
 };
 

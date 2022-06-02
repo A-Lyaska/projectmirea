@@ -52,16 +52,16 @@ void Empire::generateWar(int cwar, Type T)
             warriors.emplace_back(std::make_shared<Advanced>(6, 2, 3, 2, 1));
             break;
         case(senior_warrior):
-            warriors.emplace_back(std::make_shared<SeniorWarrier>(2, 1, 2, 1, 1));
+            warriors.emplace_back(std::make_shared<SeniorWarrior>(2, 1, 2, 1, 1));
             break;
         case(elite_anomal):
-            warriors.emplace_back(std::make_shared<Elite_hero>(8, 4, 5, 2, 2));
+            warriors.emplace_back(std::make_shared<EliteAnomal>(8, 4, 5, 2, 2));
             break;
         case(ordinary_warrier):
             warriors.emplace_back(std::make_shared<Ordinary>(1, 0, 1, 1, 1));
             break;
         case(legendary_legend):
-            warriors.emplace_back(std::make_shared<Senior_berserker>(2, 1, 2, 1, 1));
+            warriors.emplace_back(std::make_shared<LegendaryLegend>(2, 1, 2, 1, 1));
             break;
         }
         warriors[warriors.size()-1].get()->show();
@@ -102,7 +102,7 @@ void Empire::generateInsect(int count, Type T)
             insects.emplace_back(std::make_shared<Butterfly>(18, 17));
             break;
         case(thick_legged):
-            insects.emplace_back(std::make_shared<Mole_cricket>(23, 9, 0, 2, std::vector<Resources>{dewdrop}));
+            insects.emplace_back(std::make_shared<ThickLegged>(23, 9, 0, 2, std::vector<Resources>{dewdrop}));
             break;
         }
         insects[insects.size()-1].get()->show();
@@ -419,7 +419,7 @@ void Heap::show() {
     cout << endl << endl;
 }
 
-void Tropic::dopEffect(shared_ptr<Empire>& e) {
+void Ragnarok::dopEffect(shared_ptr<Empire>& e) {
     PrintWord("", '!', 1);
     PrintWord("Эффект тропиков начинает свое господство в Empire " + to_string(e->EmpireName));
     PrintWord("", '!', 1);
@@ -433,7 +433,7 @@ void Tropic::dopEffect(shared_ptr<Empire>& e) {
     }
 }
 
-void Tropic::revers(shared_ptr<Empire> &e) {
+void Ragnarok::revers(shared_ptr<Empire> &e) {
     PrintWord("", '!', 1);
     PrintWord("Эффект тропиков закончил свое господство в Empire " + to_string(e->EmpireName));
     PrintWord("", '!', 1);
@@ -459,7 +459,7 @@ void showWin(shared_ptr<Empire>& ptr) {
 
 void startGame(int day) {
     srand(time(0));
-    Tropic t;
+    Ragnarok t;
     PrintWord("Добро пожаловать на 75-е Очень Голодные игры!!!");
     PrintWord("И пусть удача всегда будет с вами!", ' ', 1);
     while(day && vH.size() > 0) {
