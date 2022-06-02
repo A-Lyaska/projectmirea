@@ -48,21 +48,25 @@ void Empire::generateWar(int cwar, Type T)
     while(cwar--) {
         if(flag) T = v[0 + rand() % v.size()];
         switch (T.value) {
-        case(advanced):
-            warriors.emplace_back(std::make_shared<Advanced>(6, 2, 3, 2, 1));
-            break;
-        case(senior_warrior):
-            warriors.emplace_back(std::make_shared<SeniorWarrior>(2, 1, 2, 1, 1));
-            break;
-        case(elite_anomal):
-            warriors.emplace_back(std::make_shared<EliteAnomal>(8, 4, 5, 2, 2));
-            break;
-        case(ordinary_warrier):
-            warriors.emplace_back(std::make_shared<Ordinary>(1, 0, 1, 1, 1));
-            break;
-        case(legendary_legend):
-            warriors.emplace_back(std::make_shared<LegendaryLegend>(2, 1, 2, 1, 1));
-            break;
+            case(ordinary_warrior):
+                warriors.emplace_back(std::make_shared<Ordinary>(1, 0, 1, 1, 1));
+                break;
+            case(legendary_legend):
+                warriors.emplace_back(std::make_shared<LegendaryLegend>(10, 6, 4, 1, 3));
+                break;
+            case(advanced):
+                warriors.emplace_back(std::make_shared<Advanced>(6, 2, 3, 1, 2));
+                break;
+            case(elite_anomal):
+                warriors.emplace_back(std::make_shared<EliteAnomal>(8, 4, 5, 2, 2));
+                break;
+            case(senior_warrior):
+                warriors.emplace_back(std::make_shared<SeniorWarrior>(2, 1, 2, 1, 1));
+                break;
+            case(usual_absent_minded):
+                warriors.emplace_back(std::make_shared<UsualAbsentMinded>(1, 0, 0.5, 1, 1));
+                break;
+
         }
         warriors[warriors.size()-1].get()->show();
         warriors[warriors.size()-1].get()->setE(q.getE());
@@ -76,34 +80,44 @@ void Empire::generateWork(int cwork, Type T)
     while(cwork--) {
         if(flag) T = v[0 + rand() % v.size()];
         switch (T.value) {
-        case(senior_worker):
-            workers.emplace_back(std::make_shared<SeniorWorker>(2, 1, 1, std::vector<Resources>{leaf, pebble}));
-            break;
-        case(advanced_sleepy):
-            workers.emplace_back(std::make_shared<Advanced_sleepy>(6, 2, 2, std::vector<Resources>{/*twig, dewdrop,*/ pebble, leaf}));
-            break;
-        case(usual_stocky):
-            workers.emplace_back(std::make_shared<An_ordinary_pickpocket>(1, 0, 1, std::vector<Resources>{twig}));
-            break;
+            case(senior_worker):
+                workers.emplace_back(std::make_shared<SeniorWorker>(2, 1, 1, std::vector<Resources>{dewdrop, pebble}));
+                break;
+            case(ordinary_unique):
+                workers.emplace_back(std::make_shared<OrdinaryUnique>(1, 0, 1, std::vector<Resources>{pebble}));
+                break;
+            case(advanced_sleepy):
+                workers.emplace_back(std::make_shared<Advanced_sleepy>(6, 2, 2, std::vector<Resources>{pebble, leaf}));
+                break;
+            case(ordinary_worker):
+                workers.emplace_back(std::make_shared<OrdinaryWorker>(1, 0, 1, std::vector<Resources>{pebble}));
+                break;
+            case(usual_stocky):
+                workers.emplace_back(std::make_shared<UsualStocky>(1, 0, 1, std::vector<Resources>{dewdrop}));
+                break;
         }
+    }
         workers[workers.size()-1].get()->show();
         workers[workers.size()-1].get()->setE(q.getE());
-    }
 }
 
-void Empire::generateInsect(int count, Type T)
+
+void Empire::generateInsect(int cinsect, Type T)
 {
     std::vector<Type_Insect> v = q.getTI();
     bool flag = T.value == 0;
-    while(count--) {
+    while(cinsect--) {
         if(flag) T = v[0 + rand() % v.size()];
         switch (T.value) {
-        case(butterfly):
-            insects.emplace_back(std::make_shared<Butterfly>(18, 17));
-            break;
-        case(thick_legged):
-            insects.emplace_back(std::make_shared<ThickLegged>(23, 9, 0, 2, std::vector<Resources>{dewdrop}));
-            break;
+            case(butterfly):
+                insects.emplace_back(std::make_shared<Butterfly>(22, 9, 9, 0, std::vector<Resources>{}, 2, 3));
+                break;
+            case(thick_legged):
+                insects.emplace_back(std::make_shared<ThickLegged>(17, 9, 10, 0, std::vector<Resources>{}, 3, 3));
+                break;
+            case(wasp):
+                insects.emplace_back(std::make_shared<Waspn>(29, 9, 5, 0, std::vector<Resources>{}, 1, 3));
+                break;
         }
         insects[insects.size()-1].get()->show();
         insects[insects.size()-1].get()->setE(q.getE());
@@ -571,7 +585,7 @@ int main() {
         blanka.setFTDaught(1, 3);
         blanka.setFTPeriod(1, 5);
         blanka.setType(std::vector<Type_Worker>{senior_worker, usual_stocky},
-                       std::vector<Type_Warrior>{senior_warrior, ordinary_warrier, legendary_legend},
+                       std::vector<Type_Warrior>{senior_warrior, ordinary_warrior, legendary_legend},
                        std::vector<Type_Insect>{thick_legged});
         newEmpire(blanka, 17, 7, 1);
 

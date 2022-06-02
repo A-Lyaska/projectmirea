@@ -61,7 +61,7 @@ enum Type_Warrior{
     elite_anomal, // элитный аномальный воин
     advanced, // продвинутый воин
     legendary_legend, // легендарный легенда воин
-    ordinary_warrier, // обычный воин
+    ordinary_warrior, // обычный воин
     usual_absent_minded, // обычный рассеянный воин
 };
 enum Type_Insect{
@@ -594,7 +594,7 @@ senior_warrior = Type_Warrior_OP, // старший воин
 elite_anomal, // элитный аномальный воин
 advanced, // продвинутый воин
 legendary_legend, // легендарный легенда воин
-ordinary_warrier, // обычный воин +
+ordinary_warrior, // обычный воин +
 usual_absent_minded, // обычный рассеянный воин
 */
 
@@ -628,7 +628,7 @@ public:
 #define T 1
     Ordinary(int health = 1, int protection = 0, int damage = 1, int cb = 1, int ct = 1):
             Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, ordinary_warrier) {
+            Warrior::Warrior(health, protection, damage, cb, ct, ordinary_warrior) {
     }
     ~Ordinary() {
     }
@@ -769,41 +769,16 @@ class SpecialInsect: public Warrior, public Worker{
 public:
     SpecialInsect(int h = 0, int p = 0, int d = 0, int canTake = 0,
                   std::vector<Resources> v = {}, int cb = 0, int ct = 0, Type t = insects):
-        Base(h, p, d),
-        Warrior::Warrior(h, p, d, cb, ct) , Worker::Worker(h, p, canTake, v) {
+            Base(h, p, d),
+            Warrior::Warrior(h, p, d, cb, ct) , Worker::Worker(h, p, canTake, v) {
         setT(t);
     }
     virtual ~SpecialInsect() {
     }
 
-    bool attacked(int damage) { return Warrior::attacked(damage);}
+    bool isWarrior() { return count_bite == 0 ? false : true;}
+    virtual bool attacked(int damage) { return Warrior::attacked(damage);}
     virtual void show() = 0;
-};
-
-class ThickLegged: public SpecialInsect {
-public:
-#define B 3
-#define T 3
-    ThickLegged(int health = 17, int protection = 9, int damage = 10,
-                int canTake = 0, std::vector<Resources> v = {}, int cb = 3, int ct = 3):
-            Base(health, protection, damage),
-            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, thick_legged) {
-    }
-    ~ThickLegged() {
-    }
-
-    bool attacked(int damage) { return Warrior::attacked(damage);}
-    void show() {
-        cout << setw(25) << left << "Ленивый обычный агрессивный феникс - Толстоножка: "; Base::show(); Warrior::show_2(); Worker::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-
-#undef B
-#undef T
 };
 
 class Butterfly: public SpecialInsect {
@@ -812,21 +787,51 @@ public:
 #define T 3
     Butterfly(int health = 22, int protection = 9, int damage = 9,
               int canTake = 0, std::vector<Resources> v = {}, int cb = 2, int ct = 3):
-        Base(health, protection, damage),
-        SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, butterfly) {
+            Base(health, protection, damage),
+            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, butterfly) {
     }
     ~Butterfly() {
     }
     bool attacked(int damage) { return Warrior::attacked(damage);}
     void show() {
-        cout << setw(25) << left << "Ленивый обычный агрессивный гибкий - Бабочка: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
         cout << endl;
     }
     void setBT() {
         count_bite = B;
         count_targets = T;
     }
+    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
+        return;
+    }
+#undef B
+#undef T
 
+};
+
+class ThickLegged: public SpecialInsect {
+public:
+#define B 3
+#define T 3
+    ThickLegged(int health = 17, int protection = 9, int damage = 10,
+              int canTake = 0, std::vector<Resources> v = {}, int cb = 3, int ct = 3):
+            Base(health, protection, damage),
+            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, thick_legged) {
+    }
+    ~ThickLegged() {
+    }
+    bool attacked(int damage) { return Warrior::attacked(damage);}
+    void show() {
+        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << endl;
+    }
+    void setBT() {
+        count_bite = B;
+        count_targets = T;
+    }
+    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
+        return;
+    }
 #undef B
 #undef T
 
@@ -834,28 +839,31 @@ public:
 
 class Waspn: public SpecialInsect {
 public:
-#define B 0
-#define T 0
+#define B 3
+#define T 3
     Waspn(int health = 29, int protection = 9, int damage = 5,
-                int canTake = 2, std::vector<Resources> v = {dewdrop}, int cb = 1, int ct = 3):
+                int canTake = 0, std::vector<Resources> v = {}, int cb = 1, int ct = 3):
             Base(health, protection, damage),
             SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, wasp) {
     }
     ~Waspn() {
     }
-
     void show() {
-        cout << setw(25) << left << "Ленивый неуязвимый агрессивный заботливый - Оса: "; Base::show(); Warrior::show_2(); Worker::show_2();
+        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
         cout << endl;
     }
     void setBT() {
         count_bite = B;
         count_targets = T;
     }
-
+    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
+        return;
+    }
 #undef B
 #undef T
+
 };
+
 
 
 
