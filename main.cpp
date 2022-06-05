@@ -1,1502 +1,953 @@
 #include <iostream>
-#include <vector>
-#include <string>
+#include <time.h>
 #include <map>
-#include <memory>
-#include <bits/shared_ptr.h>
-#include <algorithm>
-#include <iomanip>
+#include <conio.h>
+#include <string>
 #include <windows.h>
-#include <ctime>
+
 using namespace std;
 
-
-
-
-void PrintWord(const string& s, char c = ' ', int mode = 0){
-    if(mode) cout << endl;
-    int width_field = 70; //ширина поля
-    string v(width_field, c); //для наглядности заполняем точками
-    string v1;
-
-    int l_word = s.size();
-    int l_field = v.size();
-    int step = (l_field - l_word)/2;
-
-    for(int i = 0; i < l_word; i++){
-        v1.push_back(s[i]);
-    }
-    copy(v1.begin(), v1.end(),v.begin()+step);
-    for(auto x : v){
-        cout << x;
-    }
-    if(mode) cout << endl;
+void line() {
+    cout
+            << "---------------------------------------------------------------------------------------------------------------------"
+            << endl;
 }
 
-
-enum Resources{
-    twig = 0,
-    dewdrop,
-    pebble,
-    leaf
-};
-
-enum Type_OP {
-    Type_Worker_OP = 0x100,
-    Type_Warrior_OP = 0x200,
-    Type_Insect_OP = 0x300,
-    Type_Parent_OP = 0x400,
-};
-enum Type_Worker{
-    defW = 0,
-    senior_worker = Type_Worker_OP, // старший рабочий
-    ordinary_unique, // обычный неповторимый рабочий
-    ordinary_worker, // обычный рабочий
-    advanced_sleepy, // продвинутый сонный рабочий
-    usual_stocky, // обычный коренастый рабочий
-};
-enum Type_Warrior{
-    defWa = 0,
-    senior_warrior = Type_Warrior_OP, // старший воин
-    elite_anomal, // элитный аномальный воин
-    advanced, // продвинутый воин
-    legendary_legend, // легендарный легенда воин
-    ordinary_warrior, // обычный воин
-    usual_absent_minded, // обычный рассеянный воин
-};
-enum Type_Insect{
-    defI = 0,
-    butterfly = Type_Insect_OP, // бабочка
-    thick_legged, // толстоножка
-    wasp, // оса
-};
-enum Type_Parent{
-    defP = 0,
-    base = Type_Parent_OP,
-    warrior,
-    worker,
-    insects,
-    queen
-};
-
-struct Type {
-    int value;
-
-    Type(Type_Worker val) : value((int)val) { }
-    Type(Type_Warrior val) : value((int)val) { }
-    Type(Type_Insect val) : value((int)val) { }
-    Type(Type_Parent val) : value((int)val) { }
-    Type& operator=(Type_Worker val) {
-        value = (int)val;
-        return *this;
-    }
-    Type& operator=(Type_Warrior val) {
-        value = (int)val;
-        return *this;
-    }
-    Type& operator=(Type_Insect val) {
-        value = (int)val;
-        return *this;
-    }
-    Type& operator=(Type_Parent val) {
-        value = (int)val;
-        return *this;
-    }
-
-    Type_Worker get_worker() const {
-        if (value >= senior_worker && value <= usual_stocky)
-            return (Type_Worker)value;
-        return defW;
-    }
-    Type_Warrior get_warrier() const {
-        if (value >= senior_warrior && value <= usual_absent_minded)
-            return (Type_Warrior)value;
-        return defWa;
-    }
-    Type_Insect get_insect() const {
-        if (value >= butterfly && value <= wasp)
-            return (Type_Insect)value;
-        return defI;
-    }
-    Type_Parent get_parent() const {
-        if (value >= base && value <= queen)
-            return (Type_Parent)value;
-        return defP;
-    }
-};
-
-
-
-
-class Empire;
-class Heap;
-class Q;
-class Worker;
-class SpecialInsect;
-class Warrior;
-
-std::vector<shared_ptr<Empire>> vE;
-std::vector<Heap> vH;
-
-class Base {
-protected:
-    int h = 0;
-    int p = 0;
-    int d = 0;
-    bool isAlive = true;
-    Type type = base;
-    weak_ptr<Empire> e;
-public:
-    Base(int h = 0, int p = 0, int d = 0) {
-        this->h = h;
-        this->p = p;
-        this->d = d;
-        this->isAlive = true;
-    }
-    virtual ~Base() {
-    }
-    bool in_operation = true;
-    int getH() const { return h;}
-    void setH(int newH) { h = newH;}
-    int getP() const { return p;}
-    void setP(int newP) { p = newP;}
-    int getD() const { return d;}
-    void setD(int newD) { d = newD;}
-    bool getIsAlive() const { return isAlive;}
-    void setIsAlive(bool newIsAlive) { isAlive = newIsAlive;}
-    void setT(Type newT) { type = newT;}
-    Type getT() const { return type;}
-
-    bool attacked(int damage);
-    shared_ptr<Empire> getE() { return e.lock();}
-    virtual void setE(weak_ptr<Empire> object) { e = object;}
-
-    void show() {
-        cout << "h: " << setw(3) << left << h <<
-             " p: " << setw(3) << left << p <<
-             " d: " << setw(3) << left << d << " ";
-    }
-
-
-    template<typename T>
-    bool isA() {
-        return (dynamic_cast<T*>(this) != NULL);
-    }
-};
-
-//КЛАСС КОРОЛЕВА---------------------------------------------------------------------
-class Q: public Base{
-private:
-    string name = "";
-    string mother = "";
-    int period = -1;
-    int countChildren = 0;
-    int countDaughter = 0;
-    int fp = 0, tp = 0, fc = 0, tc = 0, fd = 0, td = 0;
-
-    std::vector<Type_Worker> typeWork = {};
-    std::vector<Type_Warrior> typeWar = {};
-    std::vector<Type_Insect> typeInsect = {};
-public:
-    Q():Base(0,0,0) {
-        setT(queen);
-    }
-    Q(string name, int h, int p, int d): Base(h, p, d), name(name) {
-        setT(queen);
-    }
-    ~Q() {
-    }
-
-    string getName() { return name;}
-    string getMName() {return mother;}
-    void setName(std::string n) {this->name = n;}
-    void setType(std::vector<Type_Worker> typeWork, std::vector<Type_Warrior> typeWar,
-                 std::vector<Type_Insect> typeInsect) {
-        this->typeWork = typeWork;
-        this->typeWar = typeWar;
-        this->typeInsect = typeInsect;
-    }
-    void setFTPeriod(int f, int t){ this->fp = f; this->tp = t;}
-    void setFTDaught(int f, int t){ this->fd = f; this->td = t;}
-    void setFTChildren(int f, int t){ this->fc = f; this->tc = t;}
-
-    void set_period() { period = fp + (rand() % ((tp - fp) + 1)); }
-    void set_daughter() { countDaughter = fd + (rand() % ((td - fp) + 1)); }
-    void set_children() { countChildren = fc + (rand() % ((tc - fc) + 1)); }
-
-    std::vector<Type_Worker> getTWork(){return typeWork;}
-    std::vector<Type_Warrior> getTWar(){return typeWar;}
-    std::vector<Type_Insect> getTI(){return typeInsect;}
-
-    bool pregnancy();
-
-    void show() {
-        cout << "Королева: " << getName() << " "; Base::show();
-        cout << endl;
-    }
-    void show_2() {
-        cout << "       " << "Период: " << setw(3) << period <<
-             " Кол-во детей: " << setw(3) << countChildren <<
-             " Кол-во дочерей: " << setw(3) << countDaughter;
-        cout << endl;
-    }
-
-    Q newQ();
-    int getCountChildren() { return countChildren;}
-    int getCountDaughter() { return countDaughter;}
-
-};
-
-
-
-//ИМПЕРИЯ---------------------------------------------------------------------------------
-using  SharedWorkerPtr = std::shared_ptr<Worker>;
-using  SharedWarriorPtr = std::shared_ptr<Warrior>;
-using  SharedInsectPtr = std::shared_ptr<SpecialInsect>;
-
-class Empire{
-private:
-    Q q;
-    std::vector<SharedWarriorPtr> warriors = {};
-    std::vector<SharedWorkerPtr> workers = {};
-    std::vector<SharedInsectPtr> insects = {};
-    std::map<Resources, int> resources;
-public:
-    Empire(Q& q) {
-        this->q = q;
-    }
-    int EmpireName = -1;
-    void setNameEmpire(int i) {
-        EmpireName = i + 1;
-    }
-
-    ~Empire() {
-        warriors.clear();
-        workers.clear();
-        insects.clear();
-    }
-
-    void generateWork(int count, Type T = defW);
-    void generateWar(int count, Type T = defWa);
-    void generateInsect(int count, Type T = defI);
-    void setQptrOnE(weak_ptr<Empire> object) {q.setE(object);}
-
-    friend bool isEnemy(weak_ptr<Empire> a, weak_ptr<Empire> e);
-
-    void clear();
-
-    void toTakeResources();
-    void startDay();
-    void showArmy();
-    void showAllAnts();
-    Q& getQ() { return q;}
-
-    void randomDistribution();
-    std::vector<SharedWorkerPtr>& getWorkers() { return workers;}
-    std::vector<SharedInsectPtr>& getInsects() { return insects;}
-    std::vector<SharedWarriorPtr>& getWarrior() { return warriors;}
-    std::map<Resources, int> toGetResource() { return resources;}
-
-    size_t sumResource() {
-        size_t sum = 0;
-        for(auto it: resources) {
-            sum += it.second;
-        }
-        return sum;
-    }
-};
-
-
-class Heap {
-public:
-    std::map<Resources, int> resources;
-    bool empty = false;
-
-    std::vector<SharedWarriorPtr> warriors = {};
-    std::vector<SharedWorkerPtr> workers = {};
-    std::vector<SharedInsectPtr> insects = {};
-
-    Heap(int twig = 0, int dewdrop = 0, int pebble = 0, int leaf = 0) {
-        resources[Resources::twig] = twig;
-        resources[Resources::dewdrop] = dewdrop;
-        resources[Resources::pebble] = pebble;
-        resources[Resources::leaf] = leaf;
-        setNameHeap(vH.empty()? -1 : vH.at(vH.size()-1).HeapName);
-    }
-
-    void addWar(SharedWarriorPtr& w);
-    void addWork(SharedWorkerPtr& w);
-    void addIns(SharedInsectPtr& w);
-
-    int HeapName = -1;
-    void setNameHeap(int i) {
-        HeapName = i + 1;
-    }
-
-    void WAR();
-    void TAKE_RES();
-
-    ~Heap() {
-        delMySelf();
-    }
-
-    void delMySelf();
-    void totalDel();
-    void show();
-};
-
-void newEmpire(Q& q, int cwork = 0, int cwar = 0, int cinsect = 0);
-
-template <class T, class Q>
-void hit(T t, Q q);
-
-void startGame(int day);
-
-void showWin(shared_ptr<Empire>& ptr);
-
-
-
-
-//КЛАСС РАБОЧИЙ----------------------------------------------------------------------------
-class Worker: virtual public Base {
-protected:
-    std::map<Resources, int> resources = {};
-    int count_canTake = 0;
-    std::vector<Resources> v = {};
-    weak_ptr<Empire> e;
-public:
-    Worker();
-    Worker(int health = 0, int protection = 0, int canTake = 0, std::vector<Resources> v = {}, Type t = worker):
-            Base(health, protection) {
-        setT(t);
-        this->count_canTake = canTake;
-        this->v = v;
-        for(auto it: v) {
-            resources[it] = 0;
-        }
-    }
-
-    virtual ~Worker() {
-    }
-    virtual int getCountTake() { return count_canTake;}
-
-    virtual void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) = 0;
-    virtual std::map<Resources, int>& toGetResource() { return resources;}
-
-    virtual void show() = 0;
-    void show_2() {
-        cout << "Кол-во, которое можно взять: " << setw(3) << left << count_canTake << " { ";
-        for(auto it: v) cout << setw(3) << left << to_string(it) << " ";
-        cout << " } "; show_3();
-    }
-    void show_3() {
-        cout << " -----Есть----- :";
-        for(auto& it: resources) {
-            cout << " " << it.first << " = " << it.second;
-        }
-    }
-};
-
-/* senior_worker = Type_Worker_OP, // старший рабочий +
-    ordinary_unique, // обычный неповторимый рабочий +-
-    ordinary_worker, // обычный рабочий +
-    advanced_sleepy, // продвинутый сонный рабочий +
-    usual_stocky, // обычный коренастый рабочий +-
-*/
-
-class SeniorWorker: public Worker{
-public:
-    SeniorWorker(int health = 2, int protection = 1, int canTake = 1, std::vector<Resources> v = {dewdrop, pebble}):
-            Base(health, protection),
-            Worker::Worker(health, protection, canTake, v, senior_worker) {
-    }
-    ~SeniorWorker() {
-    }
-    void show() {
-        cout << setw(25) << left << "Старший рабочий: "; Base::show(); Worker::show_2();
-        cout << endl;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        for(size_t i = 0; i < v.size(); ++i) {
-            int a = resources[v.at(i)];
-            if(res.find(v.at(i)) == res.end()) continue;
-            res[v.at(i)] -= count_canTake;
-            resources[v.at(i)] += count_canTake;
-            if(res[v.at(i)] < 0) {
-                resources[v.at(i)] += res[v.at(i)];
-                res[v.at(i)] = 0;
-            }
-            if(a != resources[v.at(i)]) break;
-        }
-    }
-};
-
-class OrdinaryWorker: public Worker{
-public:
-    OrdinaryWorker(int health = 1, int protection = 0, int canTake = 1, std::vector<Resources> v = {pebble}):
-            Base(health, protection),
-            Worker::Worker(health, protection, canTake, v, ordinary_worker) {
-    }
-    ~OrdinaryWorker() {
-    }
-    void show() {
-        cout << setw(25) << left << "Обычный рабочий: "; Base::show(); Worker::show_2();
-        cout << endl;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        for(size_t i = 0; i < v.size(); ++i) {
-            int a = resources[v.at(i)];
-            if(res.find(v.at(i)) == res.end()) continue;
-            res[v.at(i)] -= count_canTake;
-            resources[v.at(i)] += count_canTake;
-            if(res[v.at(i)] < 0) {
-                resources[v.at(i)] += res[v.at(i)];
-                res[v.at(i)] = 0;
-            }
-            if(a != resources[v.at(i)]) break;
-        }
-    }
-};
-
-class Advanced_sleepy: public Worker{
-    bool sleep = false;
-public:
-    Advanced_sleepy(int health = 6, int protection = 2, int canTake = 2, std::vector<Resources> v = {pebble, leaf}):
-            Base(health, protection),
-            Worker::Worker(health, protection, canTake, v, advanced_sleepy) {
-    }
-    ~Advanced_sleepy() {
-    }
-    void show() {
-        cout << setw(25) << left << "Продвинутый сонный рабочий: "; Base::show(); Worker::show_2();
-        cout << endl;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        if((rand() % 10) < 3 && !sleep) {
-            sleep = true;
-            in_operation = false;
-        }
-        for(size_t i = 0; i < v.size(); ++i) {
-            int a = resources[v.at(i)];
-            if(res.find(v.at(i)) == res.end()) continue;
-            res[v.at(i)] -= count_canTake;
-            resources[v.at(i)] += count_canTake;
-            if(res[v.at(i)] < 0) {
-                resources[v.at(i)] += res[v.at(i)];
-                res[v.at(i)] = 0;
-            }
-            if(a != resources[v.at(i)]) break;
-        }
-    }
-    int getCountTake() {
-        cout << "Продвинутый сонный рабочий ";
-        if(sleep && !in_operation) {
-            sleep = false;
-            cout << "спит\n";
-            return 0;
-        }
-        else if(!sleep && !in_operation) {
-            in_operation = true;
-        }
-        return count_canTake;
-    }
-};
-
-class UsualStocky: public Worker{
-public:
-    UsualStocky(int health = 1, int protection = 0, int canTake = 1, std::vector<Resources> v = {dewdrop}):
-            Base(health, protection),
-            Worker::Worker(health, protection, canTake, v, usual_stocky) {
-    }
-    ~UsualStocky() {
-    }
-    void show() {
-        cout << setw(25) << left << "Jбычный коренастый рабочий: "; Base::show(); Worker::show_2();
-        cout << endl;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& workers) {
-        auto it = workers.begin();
-        for(size_t i = 0; i < v.size(); ++i) {
-            int a = resources[v.at(i)];
-            if(res.find(v.at(i)) == res.end()) continue;
-            res[v.at(i)] -= count_canTake;
-            resources[v.at(i)] += count_canTake;
-            if(res[v.at(i)] < 0) {
-                resources[v.at(i)] += res[v.at(i)];
-                res[v.at(i)] = 0;
-            }
-            if(a != resources[v.at(i)]) break;
-        }
-
-        // реализовать выживание от одного укуса!!!!!---------------------------------------------------------!!!
-
-        /* for(; it < workers.end() && resources.empty(); ) {
-            if(isEnemy(this->e, it->get()->getE())) {
-                map<Resources, int>& res = it->get()->toGetResource();
-                res[dewdrop] -= count_canTake;
-                resources[dewdrop] += count_canTake;
-                if(res[dewdrop] < 0) {
-                    resources[dewdrop] += res[dewdrop];
-                    res[dewdrop] = 0;
-                }
-            }
-            if(!resources.empty()) {
-                cout << "An_ordinary_pickpocket украл :";
-                this->show();
-                it->get()->show();
-            }
-        }
-         */
-
-    }
-};
-
-class OrdinaryUnique: public Worker{
-public:
-    OrdinaryUnique(int health = 1, int protection = 0, int canTake = 1, std::vector<Resources> v = {pebble}):
-            Base(health, protection),
-            Worker::Worker(health, protection, canTake, v, ordinary_unique) {
-    }
-    ~OrdinaryUnique() {
-    }
-    void show() {
-        cout << setw(25) << left << "Jбычный неповторимый рабочий: "; Base::show(); Worker::show_2();
-        cout << endl;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& workers) {
-        auto it = workers.begin();
-        for(size_t i = 0; i < v.size(); ++i) {
-            if(res.find(v.at(i)) == res.end()) return;
-            if(res[v.at(i)] == 0) {
-                resources[v.at(i)] += count_canTake;
-                return ;
-            }
-            int a = resources[v.at(i)];
-            if(res.find(v.at(i)) == res.end()) continue;
-            res[v.at(i)] -= count_canTake;
-            resources[v.at(i)] += count_canTake;
-            if(res[v.at(i)] < 0) {
-                resources[v.at(i)] += res[v.at(i)];
-                res[v.at(i)] = 0;
-            }
-            if(a != resources[v.at(i)]) break;
-        }
-
-        // реализовать игнорирование модификаторов !!!!!---------------------------------------------------------!!!
-        // реализовать игнорирование атак любых типов!!!-------------------------------------!!!
-
-    }
-};
-
-
-/*
-senior_warrior = Type_Warrior_OP, // старший воин
-elite_anomal, // элитный аномальный воин
-advanced, // продвинутый воин
-legendary_legend, // легендарный легенда воин
-ordinary_warrior, // обычный воин +
-usual_absent_minded, // обычный рассеянный воин
-*/
-
-//КЛАСС ВОИН-------------------------------------------------------------------------------
-class Warrior: virtual public Base {
-protected:
-    int count_bite = 0;
-    int count_targets = 0;
-public:
-    Warrior(int h = 0, int p = 0, int d = 0, int cb = 0, int ct = 0, Type t = warrior):
-            Base(h, p, d), count_bite(cb), count_targets(ct) {
-        setT(t);
-    }
-    virtual ~Warrior() {
-    }
-
-    int& getCountBite() {return count_bite;}
-    int& getCountTargets() {return count_targets;}
-    virtual bool attacked(int damage) { return Base::attacked(damage);}
-    virtual void show() = 0;
-    void show_2() {
-        cout << "Кол-во укусов: " << setw(3) << left  << count_bite
-             << " Кол-во целей: " << setw(3) << left  << count_targets;
-    }
-    virtual void setBT() = 0;
-};
-
-class Ordinary: public Warrior {
-public:
-#define B 1
-#define T 1
-    Ordinary(int health = 1, int protection = 0, int damage = 1, int cb = 1, int ct = 1):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, ordinary_warrior) {
-    }
-    ~Ordinary() {
-    }
-    void show() {
-        cout << setw(25) << left << "Обычный воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-class LegendaryLegend: public Warrior {
-public:
-#define B 1
-#define T 3
-    LegendaryLegend(int health = 10, int protection = 6, int damage = 4, int cb = 1, int ct = 3):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, legendary_legend) {
-    }
-    ~LegendaryLegend() {
-    }
-    void show() {
-        cout << setw(25) << left << "Легендарный легенда воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-class Advanced: public Warrior {
-public:
-#define B 1
-#define T 2
-    Advanced(int health = 6, int protection = 2, int damage = 3, int cb = 1, int ct = 2):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, advanced) {
-    }
-    ~Advanced() {
-    }
-    void show() {
-        cout << setw(25) << left << "Продвинутый воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-class EliteAnomal: public Warrior {
-public:
-#define B 2
-#define T 2
-    EliteAnomal(int health = 8, int protection = 4, int damage = 5, int cb = 2, int ct = 2):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, elite_anomal) {
-    }
-    ~EliteAnomal() {
-    }
-    void show() {
-        cout << setw(25) << left << "Элитный аномальный воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-class SeniorWarrior: public Warrior {
-public:
-#define B 1
-#define T 1
-    SeniorWarrior(int health = 2, int protection = 1, int damage = 2, int cb = 1, int ct = 1):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, senior_warrior) {
-    }
-    ~SeniorWarrior() {
-    }
-    void show() {
-        cout << setw(25) << left << "Старший воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-class UsualAbsentMinded: public Warrior {
-public:
-#define B 1
-#define T 1
-    UsualAbsentMinded(int health = 1, int protection = 0, float damage = 0.5, int cb = 1, int ct = 1):
-            Base(health, protection, damage),
-            Warrior::Warrior(health, protection, damage, cb, ct, usual_absent_minded) {
-    }
-    ~UsualAbsentMinded() {
-    }
-    void show() {
-        cout << setw(25) << left << "Обычный рассеянный воин: "; Base::show(); Warrior::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-#undef B
-#undef T
-};
-
-
-/*
- * butterfly = Type_Insect_OP, // бабочка
-    thick_legged, // толстоножка
-    wasp, // оса
- */
-
-
-
-
-//КЛАСС СПЕЦИАЛЬНЫЕ НАСЕКОМЫЕ--------------------------------------------------------------
-class SpecialInsect: public Warrior, public Worker{
-public:
-    SpecialInsect(int h = 0, int p = 0, int d = 0, int canTake = 0,
-                  std::vector<Resources> v = {}, int cb = 0, int ct = 0, Type t = insects):
-            Base(h, p, d),
-            Warrior::Warrior(h, p, d, cb, ct) , Worker::Worker(h, p, canTake, v) {
-        setT(t);
-    }
-    virtual ~SpecialInsect() {
-    }
-
-    bool isWarrior() { return count_bite == 0 ? false : true;}
-    virtual bool attacked(int damage) { return Warrior::attacked(damage);}
-    virtual void show() = 0;
-};
-
-class Butterfly: public SpecialInsect {
-public:
-#define B 2
-#define T 3
-    Butterfly(int health = 22, int protection = 9, int damage = 9,
-              int canTake = 0, std::vector<Resources> v = {}, int cb = 2, int ct = 3):
-            Base(health, protection, damage),
-            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, butterfly) {
-    }
-    ~Butterfly() {
-    }
-    bool attacked(int damage) { return Warrior::attacked(damage);}
-    void show() {
-        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        return;
-    }
-#undef B
-#undef T
-
-};
-
-class ThickLegged: public SpecialInsect {
-public:
-#define B 3
-#define T 3
-    ThickLegged(int health = 17, int protection = 9, int damage = 10,
-                int canTake = 0, std::vector<Resources> v = {}, int cb = 3, int ct = 3):
-            Base(health, protection, damage),
-            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, thick_legged) {
-    }
-    ~ThickLegged() {
-    }
-    bool attacked(int damage) { return Warrior::attacked(damage);}
-    void show() {
-        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        return;
-    }
-#undef B
-#undef T
-
-};
-
-class Waspn: public SpecialInsect {
-public:
-#define B 3
-#define T 3
-    Waspn(int health = 29, int protection = 9, int damage = 5,
-          int canTake = 0, std::vector<Resources> v = {}, int cb = 1, int ct = 3):
-            Base(health, protection, damage),
-            SpecialInsect::SpecialInsect(health, protection, damage, canTake, v, cb, ct, wasp) {
-    }
-    ~Waspn() {
-    }
-    void show() {
-        cout << setw(25) << left << "Butterfly: "; Base::show(); Warrior::show_2(); Worker::show_2();
-        cout << endl;
-    }
-    void setBT() {
-        count_bite = B;
-        count_targets = T;
-    }
-    void toTakeResource(std::map<Resources, int>& res, vector<SharedWorkerPtr>& worker) {
-        return;
-    }
-#undef B
-#undef T
-
-};
-
-
-
-
-
-class Ragnarok{
-public:
-#define RagnarDay 5
-#define EffectDay 3
-    int day = RagnarDay;
-    int ef_day = EffectDay;
-    bool flag = false;
-    void dopEffect(shared_ptr<Empire>& e);
-    void revers(shared_ptr<Empire>& e);
-    void setTD() { day = RagnarDay;}
-    void setED() { ef_day = EffectDay;}
-#undef RagnarDay
-#undef EffectDay
-};
-
-
-
-
-
-bool Base::attacked(int damage) {
-    if(this->p - damage > 0)  this->p -= damage;
-    else {
-        damage -= this->p;
-        this->p = 0;
-        this->h -= damage;
-        this->isAlive = this->h > 0 ? true : false;
-    }
-    return this->isAlive;
+void line2() {
+    cout << "################################################" << endl;
 }
 
-Q Q::newQ(){
-    Q new_q = (*this);
-    new_q.mother = this->name;
-    int pos = new_q.name.find('_');
-    if(pos == -1) {
-        new_q.name += "_0";
-        pos = new_q.name.find('_');
-    }
-    int n = stoi(new_q.name.substr(pos+1));
-    n += 1;
-    new_q.name = std::string(new_q.name, 0, pos+1) + std::to_string(n);
-    return (new_q);
-}
+bool FlagAttack = false, FlagOut = false;
+int RedWorker_count = 14, GreenWorker_count = 17, RedWarrior_count = 6, GreenWarrior_count = 5;
+int RedLarva, GreenLarva;
 
-bool Q::pregnancy() {
-    show_2();
-    if(period == 0) {
-        --period;
-        return true;
-    }
-    else if(period == -1) {
-        set_period();
-        set_daughter();
-        set_children();
-    }
-    --period;
-    return false;
-}
+struct Heap {
+    int branch, stone, leaf, dewdrop;
+};
 
-void Empire::generateWar(int cwar, Type T)
-{
-    std::vector<Type_Warrior> v = q.getTWar();
-    bool flag = T.value == 0;
-    while(cwar--) {
-        if(flag) T = v[0 + rand() % v.size()];
-        switch (T.value) {
-            case(ordinary_warrior):
-                warriors.emplace_back(std::make_shared<Ordinary>(1, 0, 1, 1, 1));
-                break;
-            case(legendary_legend):
-                warriors.emplace_back(std::make_shared<LegendaryLegend>(10, 6, 4, 1, 3));
-                break;
-            case(advanced):
-                warriors.emplace_back(std::make_shared<Advanced>(6, 2, 3, 1, 2));
-                break;
-            case(elite_anomal):
-                warriors.emplace_back(std::make_shared<EliteAnomal>(8, 4, 5, 2, 2));
-                break;
-            case(senior_warrior):
-                warriors.emplace_back(std::make_shared<SeniorWarrior>(2, 1, 2, 1, 1));
-                break;
-            case(usual_absent_minded):
-                warriors.emplace_back(std::make_shared<UsualAbsentMinded>(1, 0, 0.5, 1, 1));
-                break;
+Heap heap1 = {15, 39, 0, 39};
+Heap heap2 = {19, 0, 41, 0};
+Heap heap3 = {17, 0, 42, 0};
+Heap heap4 = {49, 37, 0, 0};
+Heap heap5 = {23, 21, 40, 0};
 
-        }
-        warriors[warriors.size()-1].get()->show();
-        warriors[warriors.size()-1].get()->setE(q.getE());
-    }
-}
+map<string, int> Green_resource = {
+        {"branch",  0},
+        {"dewdrop", 0},
+        {"leaf",    0},
+        {"stone",   0}
+};
+map<string, int> Red_resource = {
+        {"branch",  0},
+        {"dewdrop", 0},
+        {"leaf",    0},
+        {"stone",   0}
+};
 
-void Empire::generateWork(int cwork, Type T)
-{
-    std::vector<Type_Worker> v = q.getTWork();
-    bool flag = T.value == 0;
-    while(cwork--) {
-        if(flag) T = v[0 + rand() % v.size()];
-        switch (T.value) {
-            case(senior_worker):
-                workers.emplace_back(std::make_shared<SeniorWorker>(2, 1, 1, std::vector<Resources>{dewdrop, pebble}));
-                break;
-            case(ordinary_unique):
-                workers.emplace_back(std::make_shared<OrdinaryUnique>(1, 0, 1, std::vector<Resources>{pebble}));
-                break;
-            case(advanced_sleepy):
-                workers.emplace_back(std::make_shared<Advanced_sleepy>(6, 2, 2, std::vector<Resources>{pebble, leaf}));
-                break;
-            case(ordinary_worker):
-                workers.emplace_back(std::make_shared<OrdinaryWorker>(1, 0, 1, std::vector<Resources>{pebble}));
-                break;
-            case(usual_stocky):
-                workers.emplace_back(std::make_shared<UsualStocky>(1, 0, 1, std::vector<Resources>{dewdrop}));
-                break;
+class Ant {
+public:
+
+    int health, armor, heap_location;
+    char colony;
+
+    void Attack(int damage, int Bites_count, int warrior_heap_location) {
+        if (warrior_heap_location == heap_location && health > 0) {
+            FlagAttack = true;
+            (armor > 0) ? armor = armor - (damage * Bites_count) : health = health - (damage * Bites_count);
         }
     }
-        workers[workers.size()-1].get()->show();
-        workers[workers.size()-1].get()->setE(q.getE());
-}
+
+    Ant() {}
+
+    Ant(int h, int a, char c, int g) {
+        health = h;
+        armor = a;
+        colony = c;
+        heap_location = g;
+    }
 
 
-void Empire::generateInsect(int cinsect, Type T)
-{
-    std::vector<Type_Insect> v = q.getTI();
-    bool flag = T.value == 0;
-    while(cinsect--) {
-        if(flag) T = v[0 + rand() % v.size()];
-        switch (T.value) {
-            case(butterfly):
-                insects.emplace_back(std::make_shared<Butterfly>(22, 9, 9, 0, std::vector<Resources>{}, 2, 3));
-                break;
-            case(thick_legged):
-                insects.emplace_back(std::make_shared<ThickLegged>(17, 9, 10, 0, std::vector<Resources>{}, 3, 3));
-                break;
-            case(wasp):
-                insects.emplace_back(std::make_shared<Waspn>(29, 9, 5, 0, std::vector<Resources>{}, 1, 3));
-                break;
-        }
-        insects[insects.size()-1].get()->show();
-        insects[insects.size()-1].get()->setE(q.getE());
-    }
-}
 
-void Empire::startDay() {
-    q.show();
-    if(q.pregnancy()) {
-        PrintWord("Королева родила", '*', 1);
-        for(int i = q.getCountDaughter(); i>0 ; --i) {
-            if((bool) 0 + rand() % 2) {
-                Q qs = q.newQ();
-                newEmpire(qs);
-            }
-        }
-        int count = q.getCountChildren();
-        int cwar = 0 + (rand() % ((count-0) + 1)); //min + (rand() % ((max - min) + 1))
-        count -= cwar;
-        int cwork = (count/2) + (rand() % ((count-(count/2)) + 1));
-        count -= cwork;
-        generateWar(cwar);
-        generateWork(cwork);
-        generateInsect(count);
-        PrintWord("Добавилось: " + to_string(cwar) + " к воинам, " + to_string(cwork) + " к рабочим, " +
-                  to_string(count) + " к насекомым");
-        PrintWord("", '*', 1);
-    }
-}
+};
 
-void Empire::randomDistribution()
-{
-    if(vH.empty()) {
-        return ;
-    }
-    for(size_t i = 0; i < warriors.size(); ++i) {
-        vH[rand() % vH.size() + 0].addWar(warriors.at(i));
-    }
-    for(size_t i = 0; i < workers.size(); ++i) {
-        vH[rand() % vH.size() + 0].addWork(workers.at(i));
-    }
-    for(size_t i = 0; i < insects.size(); ++i) {
-        vH[rand() % vH.size() + 0].addIns(insects.at(i));
-    }
-}
+class Warrior : public Ant {
+public:
+    int damage, target, Bites_count;
 
-void Empire::toTakeResources() {
-    for(auto it = workers.begin(); it != workers.end(); ++it) {
-        if(!it->get()->getCountTake()) continue;
-        for(auto& ii: it->get()->toGetResource()) {
-            resources[ii.first] += ii.second;
-            ii.second = 0;
-        }
+    void Setter_War(int health, int armor, char colony, int heap_location, int damage, int target, int Bites_count) {
+        this->health = health;
+        this->armor = armor;
+        this->colony = colony;
+        this->heap_location = heap_location;
+        this->damage = damage;
+        this->target = target;
+        this->Bites_count = Bites_count;
     }
-    for(auto it = insects.begin(); it != insects.end(); ++it) {
-        if(!it->get()->getCountTake()) continue;
-        for(auto& ii: it->get()->toGetResource()) {
-            resources[ii.first] += ii.second;
-            ii.second = 0;
-        }
+
+    Warrior(int h, int a, char c, int g, int d, int t, int BC) : Ant(h, a, c, g) {
+        target = t;
+        Bites_count = BC;
+        damage = d;
+    };
+
+    Warrior() {}
+
+    static void Print_Ant(string type, int health, int armor, int damage, string Qname, char job) {
+        cout << "---------------------------------------\n---------------------------------------";
+        cout << "\nТип: " << type << endl;
+        cout << "   Здоровье = " << health << ", защита = " << armor << ", урон = " << damage << endl;
+        cout << "   Королева << " << Qname << " >>" << endl;
+        cout << "---------------------------------------\n---------------------------------------" << endl;
     }
-    cout << "Добыли новые ресурсы, теперь в наших запасах: ";
-    for(pair<Resources, int> i: resources)
-        cout << to_string(i.first) << ": " << i.second << " ";
-}
+};
 
-void Empire::clear() {
-    for(auto it = warriors.begin(); it != warriors.end(); it++) {
-        if(!it->get()->getIsAlive()) {
-            warriors.erase(it);
-            --it;
-        }
-        else {
-            it->get()->setBT();
-        }
+class Medvedka : public Ant {
+public:
+
+    int Resource_count;
+    char Resource[2];
+
+    Medvedka(int h, int a, char c, int g, int RC, char R1, char R2) : Ant(h, a, c, g) {
+        Resource_count = RC;
+        Resource[0] = R1;
+        Resource[1] = R2;
     }
-    for(auto it = workers.begin(); it != workers.end(); it++) {
-        if(!it->get()->getIsAlive()) {
-            workers.erase(it);
-            --it;
-        }
+};
+
+class Sverchok : public Ant {
+public:
+
+    int damage;
+    int target;
+    int Bites_count;
+    int Resource_count;
+    char Resource[2];
+
+    Sverchok(int h, int a, char c, int g, int d, int t, int BC, int RC, char R1, char R2) : Ant(h, a, c, g) {
+        damage = d;
+        target = t;
+        Bites_count = BC;
+        Resource_count = RC;
+        Resource[0] = R1;
+        Resource[1] = R2;
     }
-    for(auto it = insects.begin(); it != insects.end(); it++) {
-        if(!it->get()->getIsAlive()) {
-            insects.erase(it);
-            --it;
-        }
-        else {
-            it->get()->setBT();
-        }
+};
+
+class Worker : public Ant {
+public:
+
+    int Resource_count;
+    char Resource[2];
+
+    void Worker_frame(int h, int a, char c, int g, int RC, char R1, char R2, char R3) {
+        this->health = h;
+        this->armor = a;
+        this->colony = c;
+        this->heap_location = g;
+        this->Resource_count = RC;
+        this->Resource[0] = R1;
+        this->Resource[1] = R2;
+        this->Resource[2] = R3;
     }
-    cout << "Они пали с честью, мы будем помнить их имена, а о живых позаботимся." << endl;
-}
 
-void Empire::showArmy() {
-    showAllAnts();
-    cout << "Ресурсы: ";
-    for(pair<Resources, int> i: resources)
-        cout << to_string(i.first) << ": " << i.second << " ";
-    cout << endl;
-}
+    virtual void Resource_collecting(Heap heapRandom) {
+        for (int i = 0; i < Resource_count; i++) {
+            bool flag = false;
+            for (int j = 0; j < 2; j++) {
+                if (flag == 0) {
+                    switch (Resource[j]) {
+                        case 'b': {
+                            if (heapRandom.branch > 0) {
+                                heapRandom.branch = heapRandom.branch - 1;
+                                (colony == 'g') ? Green_resource["branch"]++ : Red_resource["branch"]++;
+                                flag = true;
+                            }
+                            continue;
+                            break;
+                        }
 
-void Empire::showAllAnts(){
-    cout << "Всего муравьёв: " << setw(3) << warriors.size() << "воинов, "
-                              << setw(3) << workers.size() << " рабочих, "
-                              << setw(3) << insects.size() << " насекомых";
-    cout << endl;
-    cout << "\tВоин:" << endl;
-    for(auto& it: warriors){
-        cout << "\t\t";
-        it->show();
-    }
-    cout << "\tРабочий:" << endl;
-    for(auto& it: workers){
-        cout << "\t\t";
-        it->show();
-    }
-    cout << "\tНасекомое:" << endl;
-    for(auto& it: warriors){
-        cout << "\t\t";
-        it->show();
-    }
-}
+                        case 'd': {
+                            if (heapRandom.dewdrop > 0) {
+                                heapRandom.dewdrop = heapRandom.dewdrop - 1;
+                                (colony == 'g') ? Green_resource["dewdrop"]++ : Red_resource["dewdrop"]++;
+                                flag = true;
+                            }
+                            continue;
+                            break;
+                        }
 
-void newEmpire(Q& q, int cwork, int cwar, int cinsect) {
-    shared_ptr<Empire> E = make_shared<Empire>(q);
-    q.show();
-    E->setNameEmpire(vE.empty()? -1 : vE.at(vE.size()-1)->EmpireName);
-    E->setQptrOnE(E);
-    E->generateWar(cwar);
-    E->generateWork(cwork);
-    E->generateInsect(cinsect);
-    cout << endl;
-    PrintWord("Новая колония: Имя " + to_string(E->EmpireName) + " Королева: " + E->getQ().getName(), ' ', 1);
-    cout << endl;
-    vE.emplace_back(E);
-}
+                        case 'l': {
+                            if (heapRandom.leaf > 0) {
+                                heapRandom.leaf = heapRandom.leaf - 1;
+                                (colony == 'g') ? Green_resource["leaf"]++ : Red_resource["leaf"]++;
+                                flag = true;
+                            }
+                            continue;
+                            break;
+                        }
 
-void Heap::addWar(SharedWarriorPtr& w) {
-    if(w->in_operation)
-        warriors.emplace_back(w);
-}
-
-void Heap::addWork(SharedWorkerPtr& w) {
-    if(w->in_operation){
-        workers.emplace_back(w);
-    }
-}
-
-void Heap::addIns(SharedInsectPtr& w) {
-    if(w->in_operation){
-        insects.emplace_back(w);
-    }
-}
-
-void hit(Warrior* w, Warrior* d) {
-    PrintWord(" Битва ", ' ', 1);
-    cout << "До: ";
-    cout << "\t" << w->getE()->EmpireName << ' ';  w->show();
-    cout << "\t" << d->getE()->EmpireName << ' ';  d->show();
-    cout << endl;
-    while(w->getCountBite() || d->getCountBite()) {
-        if(!w->getIsAlive()) break;
-        if(w->getCountBite() > 0) {
-            d->attacked(w->getD());
-            --w->getCountBite() ;
-        }
-        if(!d->getIsAlive()) break;
-        if(d->getCountBite() > 0) {
-            w->attacked(d->getD());
-            --d->getCountBite();
-        }
-    }
-    --w->getCountTargets();
-    --d->getCountTargets();
-    if(w->getCountTargets() <= 0) w->in_operation = false;
-    if(d->getCountTargets() <= 0) d->in_operation = false;
-    cout << "После: ";
-    cout << "\t" << w->getE()->EmpireName << ' ';  w->show();
-    cout << "\t" << d->getE()->EmpireName << ' ';  d->show();
-    PrintWord("", '_');
-    cout << endl;
-}
-
-void hit(Warrior* w, Worker* d) {
-    PrintWord(" Битва ", ' ', 1);
-    cout << "До: ";
-    cout << "\t" << w->getE()->EmpireName << ' ';  w->show();
-    cout << "\t" << d->getE()->EmpireName << ' ';  d->show();
-    cout << endl;
-    while(w->getCountBite()) {
-        if(!w->getIsAlive()) break;
-        if(w->getCountBite() > 0) {
-            d->attacked(w->getD());
-            --w->getCountBite() ;
-        }
-        if(!d->getIsAlive()) break;
-    }
-    --w->getCountTargets();
-    if(w->getCountTargets() <= 0) w->in_operation = false;
-    cout << "После: ";
-    cout << "\t" << w->getE()->EmpireName << ' ';  w->show();
-    cout << "\t" << d->getE()->EmpireName << ' ';  d->show();
-    PrintWord("", '_');
-    cout << endl;
-}
-
-void Heap::delMySelf() {
-    warriors.clear();
-    workers.clear();
-    insects.clear();
-}
-
-bool isEnemy(weak_ptr<Empire> a, weak_ptr<Empire> e){
-    if(a.lock() == e.lock()) return false;
-    Q& our = a.lock()->q;
-    Q& enemy = e.lock()->q;
-    if(enemy.getName() == our.getMName()) return false;
-    if(enemy.getMName() == our.getName()) return false;
-    return true;
-}
-
-template <typename  T, typename Q>
-void asd(T& t, Q& q) {
-    for(auto it = t.begin(); it < t.end(); ++it) {
-        for(auto ii = q.begin(); ii < q.end(); ++ii) {
-            if(isEnemy(it->get()->getE(), ii->get()->getE())) {
-                hit(it->get(), ii->get());
-                if(!it->get()->getIsAlive() || !it->get()->in_operation) {
-                    it->get()->in_operation = true;
-                    t.erase(it);
-                    --it; --ii;
-                    if(distance(t.begin(), it ) == -1) ++it;
-                }
-                if(distance(q.begin(), ii ) != -1) {
-                    if(!ii->get()->getIsAlive() || !ii->get()->in_operation) {
-                        ii->get()->in_operation = true;
-                        q.erase(ii);
-                        --ii;
+                        case 's': {
+                            if (heapRandom.stone > 0) {
+                                heapRandom.stone = heapRandom.stone - 1;
+                                (colony == 'g') ? Green_resource["stone"]++ : Red_resource["stone"]++;
+                                flag = true;
+                            }
+                            continue;
+                            break;
+                        }
+                        default:
+                            break;
                     }
                 }
-                if(t.empty()) return;
+            }
+            switch (heap_location) {
+                case 1:
+                    heap1 = heapRandom;
+                    break;
+                case 2:
+                    heap2 = heapRandom;
+                    break;
+                case 3:
+                    heap3 = heapRandom;
+                    break;
+                case 4:
+                    heap4 = heapRandom;
+                    break;
+                case 5:
+                    heap5 = heapRandom;
+                    break;
+                default:
+                    break;
             }
         }
-    }
-}
 
-void Heap::TAKE_RES() {
-    for(auto it = workers.begin(); it < workers.end(); ++it) {
-        it->get()->toTakeResource(resources, workers);
     }
 
-    cout << "Ресурсы: ";
-    for(pair<Resources, int> i: resources)
-        cout << to_string(i.first) << ": " << i.second << " ";
-    cout << endl;
-
-    empty = resources[Resources::twig] + resources[Resources::dewdrop] + resources[Resources::leaf] +
-            resources[Resources::pebble] <= 0 ;
-}
-
-void Heap::WAR() {
-    cout << "Ресурсы: ";
-    for(pair<Resources, int> i: resources)
-        cout << to_string(i.first) << ": " << i.second << " ";
-    cout << endl << endl;
-    cout << "Воин:" << endl;
-    for(auto& it: warriors){
-        cout << "\t" << it->getE()->EmpireName << ' ';
-        it->show();
+    Worker(int h, int a, char с, int g, int RC, char R1, char R2, char R3) : Ant(h, a, с, g) {
+        this->Resource_count = RC;
+        this->Resource[0] = R1;
+        this->Resource[1] = R2;
+        this->Resource[2] = R3;
     }
-    cout << "Рабочий:" << endl;
-    for(auto& it: workers){
-        cout << "\t" << it->getE()->EmpireName << ' ';
-        it->show();
+
+    Worker() {}
+
+    static void Print_Ant(string type, int health, int armor, int damage, string Qname, char job) {
+        cout << "---------------------------------------\n---------------------------------------";
+        cout << "\nТип: " << type << endl;
+        cout << "   Здоровье = " << health << ", защита = " << armor << endl;
+        cout << "   Королева << " << Qname << " >>" << endl;
+        cout << "---------------------------------------\n---------------------------------------" << endl;
     }
-    cout << "Насекомое:" << endl;
-    for(auto& it: insects){
-        cout << "\t" << it->getE()->EmpireName << ' ';
-        it->show();
-    }
-    cout << endl;
+};
 
-    for(SharedInsectPtr& it: insects) {
-        if(it->getCountTargets() > 0)
-            warriors.emplace_back(it);
-    }
-    random_shuffle(warriors.begin(), warriors.end());
-    asd(warriors, warriors);
-
-    for(SharedInsectPtr& it: insects) {
-        if(it->getIsAlive() && it->getCountTake())
-            workers.emplace_back(it);
-    }
-    random_shuffle(workers.begin(), workers.end());
-    asd(warriors, workers);
-
-    TAKE_RES();
-}
-
-void Heap::show() {
-    cout << "\n\n------------------------------------------------------------------------\n";
-    cout << setw(10) << left << "КУЧА: ";
-    for(pair<Resources, int> i: resources)
-        cout << to_string(i.first) << ": " << i.second << " ";
-    cout << endl;
-    cout << "\nВОИН:";
-    for(auto& it: warriors) it.get()->show();
-    cout << "\nРАБОЧИЙ:";
-    for(auto& it: workers) it.get()->show();
-    cout << "\nНАСЕКОМОЕ:";
-    for(auto& it: insects) it.get()->show();
-    cout << endl << endl;
-}
-
-void Ragnarok::dopEffect(shared_ptr<Empire>& e) {
-    PrintWord("", '!', 1);
-    PrintWord("Эффект рагнарока начинает своё господство в колонии под названием " + to_string(e->EmpireName));
-    PrintWord("", '!', 1);
-    vector<SharedWorkerPtr>& work = e->getWorkers();
-    vector<SharedInsectPtr>& ins = e->getInsects();
-    for(auto it = work.begin(); it < work.end(); ++it) {
-        e->generateInsect(1);
-        ins[ins.size()-1].get()->setT(it->get()->getT());
-        work.erase(it);
-        --it;
-    }
-}
-
-void Ragnarok::revers(shared_ptr<Empire> &e) {
-    PrintWord("", '!', 1);
-    PrintWord("Эффект рагнарока закончил своё господство в колонии под названием " + to_string(e->EmpireName));
-    PrintWord("", '!', 1);
-    vector<SharedInsectPtr>& ins = e->getInsects();
-    for(auto it = ins.begin(); it < ins.end(); ++it) {
-        if(it->get()->getT().get_insect() != defI) continue;
-        e->generateWork(1, it->get()->getT());
-        ins.erase(it);
-        --it;
-    }
-}
+Worker Peasant_Red[200] = {Worker(10, 6, 'r', 0, 3, 'l', 'd', 'd'), Worker(10, 6, 'r', 0, 3, 'l', 'd', 'd'),
+                           Worker(10, 6, 'r', 0, 3, 'l', 'd', 'd'), Worker(1, 0, 'r', 0, 1, 'd', 0, 0),
+                           Worker(1, 0, 'r', 0, 1, 'd', 0, 0), Worker(1, 0, 'r', 0, 1, 'd', 0, 0),
+                           Worker(1, 0, 'r', 0, 1, 'd', 0, 0), Worker(1, 0, 'r', 0, 1, 'd', 0, 0),
+                           Worker(1, 0, 'r', 0, 1, 'd', 0, 0),
+                           Worker(1, 0, 'r', 0, 1, 'd', 0, 0), Worker(2, 1, 'r', 0, 1, 'd', 'b', 0),
+                           Worker(2, 1, 'r', 0, 1, 'd', 'b', 0), Worker(2, 1, 'r', 0, 1, 'd', 'b', 0),
+                           Worker(2, 1, 'r', 0, 1, 'd', 'b', 0)};
 
 
-void showWin(shared_ptr<Empire>& ptr) {
-    PrintWord(" Подсчёт результатов... победу одержала ", ' ', 1);
-    cout << ptr->getQ().getName() << endl;
-    cout << "Её храбрые воины, сильные рабочие и доблестные насекомые смогли принести ей заслуженную победу. \n";
-    cout << "Всего ресурсов они смогли заработать: ";
-    for(pair<Resources, int> i: ptr->toGetResource())
-        cout << to_string(i.first) << ": " << i.second << " ";
-    cout << endl;
-}
+Worker Peasant_Green[200] = {Worker(1, 0, 'g', 0, 1, 'd', 0, 0), Worker(1, 0, 'g', 0, 1, 'd', 0, 0),
+                             Worker(1, 0, 'g', 0, 1, 'd', 0, 0), Worker(1, 0, 'g', 0, 1, 'd', 0, 0),
+                             Worker(1, 0, 'g', 0, 1, 'd', 0, 0), Worker(1, 0, 'g', 0, 1, 'd', 0, 0),
+                             Worker(1, 0, 'g', 0, 1, 'd', 0, 0),
+                             Worker(8, 4, 'g', 0, 2, 'l', 'd', 0), Worker(8, 4, 'g', 0, 2, 'l', 'd', 0),
+                             Worker(8, 4, 'g', 0, 2, 'l', 'd', 0), Worker(8, 4, 'g', 0, 2, 'l', 'd', 0),
+                             Worker(8, 4, 'g', 0, 2, 'l', 'd', 0),
+                             Worker(2, 1, 'g', 0, 1, 'l', 's', 0), Worker(2, 1, 'g', 0, 1, 'l', 's', 0),
+                             Worker(2, 1, 'g', 0, 1, 'l', 's', 0), Worker(2, 1, 'g', 0, 1, 'l', 's', 0),
+                             Worker(2, 1, 'g', 0, 1, 'l', 's', 0)};
 
-void startGame(int day) {
-    srand(time(0));
-    Ragnarok t;
-    PrintWord("Игры скоро начнётся! Всем приготовиться!");
-    PrintWord("И пусть удача всегда будет с вами!", ' ', 1);
-    while(day && vH.size() > 0) {
-        PrintWord("", '+', 1);
-        PrintWord("До заусхи осталось: " + to_string(day) + (day != 1 ? " дней" : " день"), ' ');
-        PrintWord("", '+', 1);
 
-        if(t.flag == false || t.ef_day == 0) {
-            if(!t.flag){
-                t.flag = 0 + rand() % 2;
-                if(t.flag == false) goto K;
-                else t.setTD();
-            }
-            if(t.ef_day == 0) {
-                t.setED();
-            }
-            if(t.flag == true) {
-                for(auto& it: vE) {
-                    t.dopEffect(it);
+Worker Peasant_Red_Special[200] = {Worker(10, 6, 'r', 0, 4, 'l', 'd', 'd'), Worker(10, 6, 'r', 0, 4, 'l', 'd', 'd'),
+                                   Worker(10, 6, 'r', 0, 4, 'l', 'd', 'd'), Worker(1, 0, 'r', 0, 2, 'd', 0, 0),
+                                   Worker(1, 0, 'r', 0, 2, 'd', 0, 0), Worker(1, 0, 'r', 0, 2, 'd', 0, 0),
+                                   Worker(1, 0, 'r', 0, 2, 'd', 0, 0), Worker(1, 0, 'r', 0, 2, 'd', 0, 0),
+                                   Worker(1, 0, 'r', 0, 2, 'd', 0, 0),
+                                   Worker(1, 0, 'r', 0, 2, 'd', 0, 0), Worker(2, 1, 'r', 0, 2, 'd', 'b', 0),
+                                   Worker(2, 1, 'r', 0, 2, 'd', 'b', 0), Worker(2, 1, 'r', 0, 2, 'd', 'b', 0),
+                                   Worker(2, 1, 'r', 0, 2, 'd', 'b', 0)};
+
+
+Worker Peasant_Green_Special[200] = {Worker(1, 0, 'g', 0, 2, 'd', 0, 0), Worker(1, 0, 'g', 0, 2, 'd', 0, 0),
+                                     Worker(1, 0, 'g', 0, 2, 'd', 0, 0), Worker(1, 0, 'g', 0, 2, 'd', 0, 0),
+                                     Worker(1, 0, 'g', 0, 2, 'd', 0, 0), Worker(1, 0, 'g', 0, 2, 'd', 0, 0),
+                                     Worker(1, 0, 'g', 0, 2, 'd', 0, 0),
+                                     Worker(8, 4, 'g', 0, 3, 'l', 'd', 0), Worker(8, 4, 'g', 0, 3, 'l', 'd', 0),
+                                     Worker(8, 4, 'g', 0, 3, 'l', 'd', 0), Worker(8, 4, 'g', 0, 3, 'l', 'd', 0),
+                                     Worker(8, 4, 'g', 0, 3, 'l', 'd', 0),
+                                     Worker(2, 1, 'g', 0, 2, 'l', 's', 0), Worker(2, 1, 'g', 0, 2, 'l', 's', 0),
+                                     Worker(2, 1, 'g', 0, 2, 'l', 's', 0), Worker(2, 1, 'g', 0, 2, 'l', 's', 0),
+                                     Worker(2, 1, 'g', 0, 2, 'l', 's', 0)};
+
+
+Warrior Warrior_Red[200] = {Warrior(1, 0, 'r', 0, 1, 1, 1), Warrior(1, 0, 'r', 0, 1, 1, 1),
+                            Warrior(8, 4, 'r', 0, 5, 2, 2), Warrior(8, 4, 'r', 0, 5, 2, 2),
+                            Warrior(10, 6, 'r', 0, 4, 3, 1), Warrior(10, 6, 'r', 0, 4, 3, 1)};
+
+
+Warrior Warrior_Green[200] = {Warrior(8, 4, 'g', 0, 5, 2, 2), Warrior(8, 4, 'g', 0, 5, 2, 2),
+                              Warrior(10, 6, 'g', 0, 4, 3, 1), Warrior(6, 2, 'g', 0, 3, 2, 1),
+                              Warrior(6, 2, 'g', 0, 3, 2, 1)};
+
+
+class Queen : public Ant {
+public:
+
+    int damage, CiclRostaLichinok;
+    string name;
+
+    virtual void Larva() {
+        int Larva_count = 1 + rand() % (11 - 1);
+        (colony == 'g') ? GreenLarva = Larva_count : RedLarva = Larva_count;
+        for (int i = 0; i < Larva_count; i++) {
+            int randomTemp = rand() % 2;
+            if (randomTemp == 0) {
+                if (colony == 'r') {
+                    int rtv = rand() % 3;
+                    if (rtv == 0) {
+                        Warrior_Red[RedWarrior_count].Setter_War(1, 0, 'r', 0, 1, 1, 1);
+                        RedWarrior_count++;
+                    } else if (rtv == 1) {
+                        Warrior_Red[RedWarrior_count].Setter_War(8, 4, 'r', 0, 5, 2, 2);
+                        RedWarrior_count++;
+                    } else if (rtv == 2) {
+                        Warrior_Red[RedWarrior_count].Setter_War(10, 6, 'r', 0, 4, 3, 1);
+                        RedWarrior_count++;
+                    }
+
+                } else {
+                    int gtv = rand() % 3;
+                    if (gtv == 0) {
+                        Warrior_Green[GreenWarrior_count].Setter_War(8, 4, 'g', 0, 5, 2, 2);
+                        GreenWarrior_count++;
+                    } else if (gtv == 1) {
+                        Warrior_Green[GreenWarrior_count].Setter_War(10, 6, 'g', 0, 4, 3, 1);
+                        GreenWarrior_count++;
+                    } else if (gtv == 2) {
+                        Warrior_Green[GreenWarrior_count].Setter_War(6, 2, 'g', 0, 3, 2, 1);
+                        GreenWarrior_count++;
+                    }
+                }
+            } else {
+                if (colony == 'r') {
+                    int rtr = rand() % 3;
+                    if (rtr == 0) {
+                        Peasant_Red[RedWorker_count].Worker_frame(10, 6, 'r', 0, 3, 'l', 'r', 'r');
+                        RedWorker_count++;
+                    } else if (rtr == 1) {
+                        Peasant_Red[RedWorker_count].Worker_frame(1, 0, 'r', 0, 1, 'r', 0, 0);
+                        RedWorker_count++;
+                    } else if (rtr == 2) {
+                        Peasant_Red[RedWorker_count].Worker_frame(2, 1, 'r', 0, 1, 'r', 'v', 0);
+                        RedWorker_count++;
+                    }
+
+                } else {
+                    int gtr = rand() % 3;
+                    if (gtr == 0) {
+                        Peasant_Green[GreenWorker_count].Worker_frame(1, 0, 'g', 0, 1, 'r', 0, 0);
+                        GreenWorker_count++;
+                    } else if (gtr == 1) {
+                        Peasant_Green[GreenWorker_count].Worker_frame(8, 4, 'g', 0, 2, 'l', 'r', 0);
+                        GreenWorker_count++;
+                    } else if (gtr == 2) {
+                        Peasant_Green[GreenWorker_count].Worker_frame(2, 1, 'g', 0, 1, 'l', 'k', 0);
+                        GreenWorker_count++;
+                    }
+
                 }
             }
         }
-        K:
-        for(size_t i = 0; i < vE.size(); ++i) {
-            PrintWord(" Колония " + to_string(vE.at(i)->EmpireName), '-', 1);
-            vE.at(i)->startDay();
-            vE.at(i)->showArmy();
-            vE.at(i)->randomDistribution();
+    }
+
+    Queen(int h, int a, char c, int g, int d, string n, int C) : Ant(h, a, c, g) {
+        CiclRostaLichinok = C;
+        name = n;
+        damage = d;
+    }
+};
+
+
+
+int main() {
+    SetConsoleOutputCP(CP_UTF8);
+
+    srand(time(NULL));
+
+    Medvedka Medvedka_red(28, 9, 'r', 0, 1, 'b', 0);
+    Sverchok Sverchok_green(17, 8, 'g', 0, 13, 2, 1, 1, 'l', 0);
+
+    Queen Queen_Red(21, 9, 'r', 0, 24, "Беатрикс", 4);
+    Queen Queen_Green(22, 5, 'g', 0, 19, "София", 3);
+
+    int randomDay = 1 + rand() % 9;
+    int rg, multy, multy2, choise;
+
+    for (int day = 0; day < 10; day++) {
+        int Red_Branch = Red_resource["branch"], Red_Dewdrop = Red_resource["dewdrop"], Red_Leaf = Red_resource["leaf"], Red_Stone = Red_resource["stone"];
+        int Green_Branch = Green_resource["branch"], Green_Dewdrop = Green_resource["dewdrop"], Green_Leaf = Green_resource["leaf"], Green_Stone = Green_resource["stone"];
+        bool FlagDop = false, FlagOut = false, FlagInOut = false, FlagKek = false, FlagKek2 = false;
+
+        int queendaysred = 0, queendaysgreen = 0;
+
+        queendaysred++;
+        queendaysgreen++;
+
+        if (queendaysred >= 3 && queendaysred <= 5) {
+            int rqs = rand() % 2;
+            if (rqs == 0) {
+                Queen_Red.Larva();
+                queendaysred = 0;
+            } else break;
         }
 
-        PrintWord("", 'x', 1);
-        PrintWord("Война", ' ');
-        PrintWord("", 'x', 1);
-        for(auto& it: vH) {
-            PrintWord(" Куча " + to_string(it.HeapName), '-', 1);
-            it.WAR();
-            it.delMySelf();
+        if (queendaysgreen >= 2 && queendaysgreen <= 4) {
+            int gqs = rand() % 2;
+            if (gqs == 0) {
+                Queen_Green.Larva();
+                queendaysgreen = 0;
+            } else break;
         }
-        PrintWord("", '$', 1);
-        PrintWord(" Итоги походов ", ' ');
-        PrintWord("", '$', 1);
-        for(auto& it: vE) {
-            PrintWord(" Колония " + to_string(it->EmpireName), '-', 1);
-            it->clear();
-            it->toTakeResources();
-            PrintWord("", '-', 1);
+
+        int Silkworm_count = 0;
+
+        if (day == randomDay || (day < randomDay + 3 && day > randomDay) && Silkworm_count == 0) {
+            FlagDop = true;
+            for (int i = 0; i < RedWorker_count; i++) {
+                if (Peasant_Red_Special[i].health > 0) {
+                    int randomHeap = rand() % 5;
+                    Peasant_Red_Special[i].heap_location = randomHeap + 1;
+                    switch (Peasant_Red_Special[i].heap_location) {
+                        case 1: {
+                            Peasant_Red_Special[i].Resource_collecting(heap1);
+                            break;
+                        }
+                        case 2: {
+                            Peasant_Red_Special[i].Resource_collecting(heap2);
+                            break;
+                        }
+                        case 3: {
+                            Peasant_Red_Special[i].Resource_collecting(heap3);
+                            break;
+                        }
+                        case 4: {
+                            Peasant_Red_Special[i].Resource_collecting(heap4);
+                            break;
+                        }
+                        case 5: {
+                            Peasant_Red_Special[i].Resource_collecting(heap5);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+            }
+            Silkworm_count = 1;
+        } else {
+            Silkworm_count = 0;
+            for (int i = 0; i < RedWorker_count; i++) {
+                if (Peasant_Red[i].health > 0) {
+                    int randomHeap = rand() % 5;
+                    Peasant_Red[i].heap_location = randomHeap + 1;
+                    switch (Peasant_Red[i].heap_location) {
+                        case 1: {
+                            Peasant_Red[i].Resource_collecting(heap1);
+                            break;
+                        }
+                        case 2: {
+                            Peasant_Red[i].Resource_collecting(heap2);
+                            break;
+                        }
+                        case 3: {
+                            Peasant_Red[i].Resource_collecting(heap3);
+                            break;
+                        }
+                        case 4: {
+                            Peasant_Red[i].Resource_collecting(heap4);
+                            break;
+                        }
+                        case 5: {
+                            Peasant_Red[i].Resource_collecting(heap5);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+            }
         }
-        for(auto it = vH.begin(); it < vH.end(); ++it) {
-            if(it->empty){
-                PrintWord(" Объявление! ", '.', 1);
-                cout << "Куча под названием " << it->HeapName
-                     << " опустела! И она выбывает из гонки на выживание.";
-                PrintWord("", '_', 1);
-                vH.erase(it);
-                --it;
+        if (day == randomDay || (day < randomDay + 3 && day > randomDay) && Silkworm_count == 0) {
+            FlagDop = true;
+            for (int i = 0; i < GreenWorker_count; i++) {
+                if (Peasant_Green_Special[i].health > 0) {
+                    int randomHeap = rand() % 5;
+                    Peasant_Green_Special[i].heap_location = randomHeap + 1;
+                    switch (Peasant_Green_Special[i].heap_location) {
+                        case 1: {
+                            Peasant_Green_Special[i].Resource_collecting(heap1);
+                            break;
+                        }
+                        case 2: {
+                            Peasant_Green_Special[i].Resource_collecting(heap2);
+                            break;
+                        }
+                        case 3: {
+                            Peasant_Green_Special[i].Resource_collecting(heap3);
+                            break;
+                        }
+                        case 4: {
+                            Peasant_Green_Special[i].Resource_collecting(heap4);
+                            break;
+                        }
+                        case 5: {
+                            Peasant_Green_Special[i].Resource_collecting(heap5);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+            }
+            Silkworm_count = true;
+        } else {
+            Silkworm_count = false;
+            for (int i = 0; i < GreenWorker_count; i++) {
+                if (Peasant_Green[i].health > 0) {
+                    int randomHeap = rand() % 5;
+                    Peasant_Green[i].heap_location = randomHeap + 1;
+                    switch (Peasant_Green[i].heap_location) {
+                        case 1: {
+                            Peasant_Green[i].Resource_collecting(heap1);
+                            break;
+                        }
+                        case 2: {
+                            Peasant_Green[i].Resource_collecting(heap2);
+                            break;
+                        }
+                        case 3: {
+                            Peasant_Green[i].Resource_collecting(heap3);
+                            break;
+                        }
+                        case 4: {
+                            Peasant_Green[i].Resource_collecting(heap4);
+                            break;
+                        }
+                        case 5: {
+                            Peasant_Green[i].Resource_collecting(heap5);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
             }
         }
 
-        --day;
-        if(t.flag) {
-            --t.day;
-            --t.ef_day;
-            if(t.ef_day == 0)
-                for(auto& it: vE)
-                    t.revers(it);
-            if(t.day == 0)
-                t.flag = false;
+        for (int k1 = 0; k1 < 40; k1++) {
+            Warrior_Green[k1].heap_location = rand() % 5 + 1;
+            Warrior_Red[k1].heap_location = rand() % 5 + 1;
+        }
+
+        Medvedka_red.heap_location = rand() % 5 + 1;
+        Sverchok_green.heap_location = rand() % 5 + 1;
+
+        for (int g = 0; g < GreenWarrior_count; g++) // атаки зелёных красными
+        {
+            if (Warrior_Green[g].health > 0) {
+                for (int t2 = 0; t2 < Warrior_Green[g].target; t2++) {
+                    FlagAttack = false;
+                    for (int b = 0; b < RedWarrior_count; b++) {
+                        Warrior_Red[b].Attack(Warrior_Green[g].damage, Warrior_Green[g].Bites_count,
+                                              Warrior_Green[g].heap_location);
+                        if (FlagAttack == true)
+                            break;
+                    }
+                    if (FlagAttack == false) {
+                        for (int a = 0; a < RedWorker_count; a++) {
+                            Peasant_Red[a].Attack(Warrior_Green[g].damage, Warrior_Green[g].Bites_count,
+                                                  Warrior_Green[g].heap_location);
+                            if (FlagAttack == true)
+                                break;
+                        }
+                    }
+                    if (FlagAttack == false)
+                        Medvedka_red.Attack(Warrior_Green[g].damage, Warrior_Green[g].Bites_count,
+                                            Warrior_Green[g].heap_location);
+                }
+            }
+        }
+
+        for (int r = 0; r < RedWarrior_count; r++) // атаки красных зелёными
+        {
+            if (Warrior_Red[r].health > 0) {
+
+                for (int t1 = 0; t1 < Warrior_Red[r].target; t1++) {
+                    FlagAttack = false;
+                    for (int y = 0; y < GreenWarrior_count; y++) {
+                        Warrior_Green[y].Attack(Warrior_Red[r].damage, Warrior_Red[r].Bites_count,
+                                                Warrior_Red[r].heap_location);
+                        if (FlagAttack == true)
+                            break;
+                    }
+                    if (FlagAttack == false) {
+                        for (int x = 0; x < GreenWorker_count; x++) {
+                            Peasant_Green[x].Attack(Warrior_Red[r].damage, Warrior_Red[r].Bites_count,
+                                                    Warrior_Red[r].heap_location);
+                            if (FlagAttack == true)
+                                break;
+                        }
+                    }
+                    if (FlagAttack == false)
+                        Sverchok_green.Attack(Warrior_Red[r].damage, Warrior_Red[r].Bites_count,
+                                              Warrior_Red[r].heap_location);
+                }
+            }
+        }
+
+        for (int h = 0; h < Sverchok_green.target; h++) // атакуют сверчка
+        {
+            FlagAttack = false;
+            for (int y = 0; y < RedWarrior_count; y++) {
+                Warrior_Red[y].Attack(Sverchok_green.damage, 1, Sverchok_green.heap_location);
+                if (FlagAttack == 1)
+                    break;
+            }
+            if (FlagAttack == 0) {
+                for (int x = 0; x < RedWorker_count; x++) {
+                    Peasant_Red[x].Attack(Sverchok_green.damage, 1, Sverchok_green.heap_location);
+                    if (FlagAttack == 1)
+                        break;
+                }
+            }
+        }
+
+        line();
+
+        cout << "\n\t\tНачало дня:";
+        cout << "\nдень " << day + 1 << " до засухи осталось " << 9 - day << " дней" << endl;
+        cout << endl;
+
+        int Warrior_green_count = 0, Warrior_red_count = 0, Peasant_green_count = 0, Peasant_red_count = 0, Medvedka_red_count = 0, Sverchok_green_count = 0;
+
+        for (int a = 0; a < 40; a++) // кол-во муравьёв
+        {
+            if (Warrior_Green[a].health > 0)
+                Warrior_green_count++;
+            if (Warrior_Red[a].health > 0)
+                Warrior_red_count++;
+        }
+
+        for (int x = 0; x < 40; x++) {
+            if (Peasant_Green[x].health > 0)
+                Peasant_green_count++;
+            if (Peasant_Red[x].health > 0)
+                Peasant_red_count++;
+        }
+
+        if (Medvedka_red.health > 0)
+            Medvedka_red_count++;
+
+        if (Sverchok_green.health > 0)
+            Sverchok_green_count++;
+
+        cout << "Колония Красных\n" << "   Королева: Беатрикс " << endl;
+        cout << "   Ресурсы: веточка = " << Red_resource["branch"] << "  листик = " << Red_resource["leaf"]
+             << "  камушек = " << Red_resource["stone"] << "  росинка = " << Red_resource["dewdrop"] << ";\n" << endl;
+        cout << "   Популяция " << Warrior_red_count + Peasant_red_count + Medvedka_red_count << ": рабочих = "
+             << Peasant_red_count << ", воинов = " << Warrior_red_count << ", особенных = " << Medvedka_red_count
+             << ";\n" << endl;
+        cout << "Колония Зеленых\n" << "   Королева: София " << endl;
+        cout << "   Ресурсы: веточка = " << Green_resource["branch"] << "  листик = " << Green_resource["leaf"]
+             << "  камушек = " << Green_resource["stone"] << "  росинка = " << Green_resource["dewdrop"] << endl;
+        cout << "   Популяция " << Warrior_green_count + Peasant_green_count + Sverchok_green_count << ": рабочих = "
+             << Peasant_green_count << ", воинов = " << Warrior_green_count << ", особенных = " << Sverchok_green_count
+             << ";\n" << endl;
+        cout << "Куча 1: " << "веточка = " << heap1.branch << ", листик = " << heap1.leaf << ", камушек = "
+             << heap1.stone << ", росинка = " << heap1.dewdrop << ";\n" << endl;
+        cout << "Куча 2: " << "веточка = " << heap2.branch << ", листик = " << heap2.leaf << ", камушек = "
+             << heap2.stone << ", росинка = " << heap2.dewdrop << ";\n" << endl;
+        cout << "Куча 3: " << "веточка = " << heap3.branch << ", листик = " << heap3.leaf << ", камушек = "
+             << heap3.stone << ", росинка = " << heap3.dewdrop << ";\n" << endl;
+        cout << "Куча 4: " << "веточка = " << heap4.branch << ", листик = " << heap4.leaf << ", камушек = "
+             << heap4.stone << ", росинка = " << heap4.dewdrop << ";\n" << endl;
+        cout << "Куча 5: " << "веточка = " << heap5.branch << ", листик = " << heap5.leaf << ", камушек = "
+             << heap5.stone << ", росинка = " << heap5.dewdrop << ";\n" << endl;
+
+        if (FlagDop)
+            cout
+                    << "\nГлобальный эффект:\n _Шелкопряд_ происходит каждый день \nнити шелкопряда позволяют увеличить количество ресурсов, которые можно переносить на 1 всеми насекомыми);"
+                    << endl;
+
+        if (day == 9) {
+            cout << "\nНаступила засуха\n";
+            int Red_resource_count =
+                    Red_resource["branch"] + Red_resource["leaf"] + Red_resource["dewdrop"] + Red_resource["stone"];
+            int Green_resource_count = Green_resource["branch"] + Green_resource["leaf"] + Green_resource["dewdrop"] +
+                                       Green_resource["stone"];
+            (Red_resource_count > Green_resource_count) ? cout << "Выиграла КРАСНАЯ колония муравьев " : cout
+                    << "Выиграла ЗЕЛЁНАЯ колония муравьев";
+        }
+
+        if (day != 9) {
+start0:
+            cout << "\n\n\t"
+                 << "Нажмите <1>(статистика красной колонии) или <2>(статистика зелёной колонии), <3>(Подробная статистика дня),\n \t\t\t\t\t<4>(Информация о каждом муравье)\n \t\t\t\t\t\t<9>(Играть)"
+                 << "\n\n" << endl;
+            cin >> choise;
+            switch (choise) {
+                case 1:
+                    line2();
+                    cout << "\t\tСтатистика" << endl;
+                    line2();
+                    cout << "Колония Красных:\n" << "   Королева: Беатрикс;" << endl;
+                    cout << "Здоровье = " << Queen_Red.health << ", защита = " << Queen_Red.armor << ", урон = "
+                         << Queen_Red.damage << endl;
+                    cout << "   Ресурсы: веточка = " << Red_resource["branch"] << "  листик = " << Red_resource["leaf"]
+                         << "  камушек = " << Red_resource["stone"] << "  росинка = " << Red_resource["dewdrop"]
+                         << ";\n" << endl;
+                    cout << "<<<<<<<<<< Рабочие >>>>>>>>>>" << endl;
+                    cout << "Тип: Легендарный\n" << "   Параметры: здоровье = " << Peasant_Red[0].health
+                         << ", защита = " << Peasant_Red[0].armor << endl;
+                    cout << "Тип: Обычный\n" << "   Параметры: здоровье = " << Peasant_Red[4].health << ", защита = "
+                         << Peasant_Red[4].armor << endl;
+                    cout << "Тип: Старший спринтер\n" << "   Параметры: здоровье = " << Peasant_Red[10].health
+                         << ", защита = " << Peasant_Red[10].armor << endl;
+                    cout
+                            << "Модификатор: может брать 1 ресурс: 'росинка или веточка' за раз; не может быть атакован первым."
+                            << endl;
+                    cout << "<<<<<<<<<< Воины >>>>>>>>>>" << endl;
+                    cout << "Тип: Обычный\n" << "   Параметры: здоровье = " << Warrior_Red[0].health << ", защита = "
+                         << Warrior_Red[0].armor << ", урон = " << Warrior_Red[0].damage << endl;
+                    cout << "Тип: Элитный\n" << "   Параметры: здоровье = " << Warrior_Red[2].health << ", защита = "
+                         << Warrior_Red[2].armor << ", урон = " << Warrior_Red[2].damage << endl;
+                    cout << "Тип: Легендарный трусливый\n" << "   Параметры: здоровье = " << Warrior_Red[4].health
+                         << ", защита = " << Warrior_Red[4].armor << ", урон = " << Warrior_Red[4].damage << endl;
+                    cout
+                            << "Модификатор: может атаковать 3 цели за раз и наносит 1 укус; если кто-то из союзников получил урон, то не атакует."
+                            << endl;
+                    cout << "<<<<<<<<<< Особенный >>>>>>>>>>" << endl;
+                    cout << "Тип: Трудолюбивый неуязвимый мирный марафонец - Медведка\n" << "   Параметры: здоровье = "
+                         << Medvedka_red.health << ", защита = " << Medvedka_red.armor << endl;
+                    cout
+                            << "Модификаторы: \nможет брать ресурсы (1 ресурс: веточка); \nне может быть атакован войнами; \nпосле смерти все равно доставляет ресурс в колонию."
+                            << endl;
+                    line2();
+                    FlagOut = true;
+                    goto start0;
+
+                case 2:
+                    line2();
+                    cout << "\t\tСтатистика" << endl;
+                    line2();
+                    cout << "Колония Зелёные:\n" << "   Королева: София;" << endl;
+                    cout << "Здоровье = " << Queen_Green.health << ", защита = " << Queen_Green.armor << ", урон = "
+                         << Queen_Green.damage << endl;
+                    cout << "   Ресурсы: веточка = " << Green_resource["branch"] << "  листик = "
+                         << Green_resource["leaf"] << "  камушек = " << Green_resource["stone"] << "  росинка = "
+                         << Green_resource["dewdrop"] << ";\n" << endl;
+                    cout << "<<<<<<<<<< Рабочие >>>>>>>>>>" << endl;
+                    cout << "Тип: Обычный\n" << "   Параметры: здоровье = " << Peasant_Green[0].health << ", защита = "
+                         << Peasant_Green[0].armor << endl;
+                    cout << "Тип: Элитный\n" << "   Параметры: здоровье = " << Peasant_Green[7].health << ", защита = "
+                         << Peasant_Green[7].armor << endl;
+                    cout << "Тип: Старший любимчик королевы\n" << "   Параметры: здоровье = "
+                         << Peasant_Green[12].health << ", защита = " << Peasant_Green[12].armor << endl;
+                    cout
+                            << "Модификатор: может брать 1 ресурс: 'листик или камушек' за раз; всегда отправляется только на ту кучу, где нет вражеских воинов."
+                            << endl;
+                    cout << "<<<<<<<<<< Воины >>>>>>>>>>" << endl;
+                    cout << "Тип: Элитный\n" << "   Параметры: здоровье = " << Warrior_Green[0].health << ", защита = "
+                         << Warrior_Green[0].armor << ", урон = " << Warrior_Green[0].damage << endl;
+                    cout << "Тип: Легендарный\n" << "   Параметры: здоровье = " << Warrior_Green[2].health
+                         << ", защита = " << Warrior_Green[2].armor << ", урон = " << Warrior_Green[2].damage << endl;
+                    cout << "Тип: Продвинутый мстительный\n" << "   Параметры: здоровье = " << Warrior_Green[4].health
+                         << ", защита = " << Warrior_Green[4].armor << ", урон = " << Warrior_Green[4].damage << endl;
+                    cout
+                            << "Модификатор: может атаковать 2 цели за раз и наносит 1 укус; убивает своего убийцу, даже если он неуязвим."
+                            << endl;
+                    cout << "<<<<<<<<<< Особенный >>>>>>>>>>" << endl;
+                    cout << "Тип: Трудолюбивый обычный агрессивный толстый ветеран - Сверчок\n"
+                         << "   Параметры: здоровье = " << Sverchok_green.health << ", защита = "
+                         << Sverchok_green.armor << endl;
+                    cout
+                            << "Модификаторы: \nможет брать ресурсы (1 ресурс: листик); \nможет быть атакован войнами; \nатакует врагов(2 цели за раз и наносит 1 укус); \nпринимает все атаки на себя, здоровье и защита увеличены в двое; \nотменяет все модификаторы своих и вражеских рабочих."
+                            << endl;
+                    line2();
+                    FlagOut = true;
+                    goto start0;
+
+                case 3: {
+                    FlagOut = true;
+                    cout << "Начало Похода:\n" << endl;
+
+                    int RedPeas = 0, RedWar = 0, GreenPeas = 0, GreenWar = 0;
+                    bool RedS = false, GreenS = false;
+
+                    for (int red = 0; red < 5; red++) {
+                        for (int i = 0; i < 40; i++) {
+                            (Peasant_Red[i].heap_location == (red + 1) && Peasant_Red[i].health > 0) ? RedPeas++
+                                                                                                     : RedPeas = RedPeas;
+                            (Warrior_Red[i].heap_location == (red + 1) && Warrior_Red[i].health > 0) ? RedWar++
+                                                                                                     : RedWar = RedWar;
+                        }
+                        (Medvedka_red.heap_location == (red + 1) && Medvedka_red.health > 0) ? RedS = true
+                                                                                             : RedS = false;
+                        if (RedPeas > 0 || RedWar > 0 || RedS)
+                            cout << "   С колонии Красных отправилось: рабочих = " << RedPeas << ", воинов = " << RedWar
+                                 << ",\n oсобенных = " << RedS << " на кучу " << red + 1 << endl;
+                    }
+
+                    for (int green = 0; green < 5; green++) {
+                        for (int i = 0; i < 40; i++) {
+                            (Peasant_Green[i].heap_location == (green + 1) && Peasant_Green[i].health > 0) ? GreenPeas++
+                                                                                                           : GreenPeas = GreenPeas;
+                            (Warrior_Green[i].heap_location == (green + 1) && Warrior_Green[i].health > 0) ? GreenWar++
+                                                                                                           : GreenWar = GreenWar;
+                        }
+                        (Sverchok_green.heap_location == (green + 1) && Sverchok_green.health > 0) ? GreenS = true
+                                                                                                   : GreenS = false;
+                        if (GreenPeas > 0 || (GreenWar > 0) || GreenS)
+                            cout << "   С колонии Зелёных отправилось: рабочих = " << GreenPeas << ", воинов = "
+                                 << GreenWar << ",\n oсобенных = " << GreenS << " на кучу " << green + 1 << endl;
+                    }
+
+                    cout << "\nКонец Похода:" << endl;
+
+                    int RedPeasAlive = 0, GreenPeasAlive = 0, RedWarAlive = 0, GreenWarAlive = 0;
+                    bool RedSAlive = false, GreenSAlive = false;
+
+                    for (int i = 0; i < 40; i++) {
+                        (Peasant_Red[i].health > 0) ? RedPeasAlive++ : RedPeasAlive = RedPeasAlive;
+                        (Warrior_Red[i].health > 0) ? RedWarAlive++ : RedWarAlive = RedWarAlive;
+                    }
+
+                    (Medvedka_red.health > 0) ? RedSAlive = true : RedSAlive = false;
+
+                    for (int i = 0; i < 40; i++) {
+                        (Peasant_Green[i].health > 0) ? GreenPeasAlive++ : GreenPeasAlive = GreenPeasAlive;
+                        (Warrior_Green[i].health > 0) ? GreenWarAlive++ : GreenWarAlive = GreenWarAlive;
+                    }
+
+                    (Sverchok_green.health > 0) ? GreenSAlive = true : GreenSAlive = false;
+
+                    cout << "\nВ колонию Красныx вернулись:\n   рабочие = " << RedPeasAlive << ", воины = "
+                         << RedWarAlive << ", oсобенные = " << RedSAlive << endl;
+                    cout << "   Добыто ресурсов: \n      веточек = " << Red_resource["branch"] - Red_Branch
+                         << "; \n      листиков = " << Red_resource["leaf"] - Red_Leaf << "; \n      камушков = "
+                         << Red_resource["stone"] - Red_Stone << "; \n      росинок = "
+                         << Red_resource["dewdrop"] - Red_Dewdrop << endl;
+                    (RedLarva > 0) ? cout << "   Новые личинки: " << RedLarva << endl : cout << "   Личинки еще растут"
+                                                                                             << endl;
+                    cout << "В колонию Зелёных вернулись:\n   рабочие = " << GreenPeasAlive << ", воины = "
+                         << GreenWarAlive << ", oсобенные = " << GreenSAlive << endl;
+                    cout << "   Добыто ресурсов: \n      веточек = " << Green_resource["branch"] - Green_Branch
+                         << "; \n      листиков = " << Green_resource["leaf"] - Green_Leaf << "; \n      камушков = "
+                         << Green_resource["stone"] - Green_Stone << "; \n      росинок = "
+                         << Green_resource["dewdrop"] - Green_Dewdrop << endl;
+                    (GreenLarva > 0) ? cout << "   Новые личинки: " << GreenLarva << endl : cout
+                            << "   Личинки еще растут" << endl;
+                    goto start0;
+                }
+
+                case 4: {
+                    FlagOut = true;
+                    line();
+start:
+                    cout << "\t<1>Красные\t<2>Зелёные\n\t\t\t<9>Назад" << endl;
+                    line();
+                    cout << "\n";
+                    cin >> rg;
+
+                    switch (rg) {
+                        case 1: {
+start1:
+                            line();
+                            cout << "\t<0>Легендарный рабочий\t<1>Обычный рабочий\t<2>Старший спринтер рабочий\n\t<3>Обычный воин\t<4>Элитный воин\t<5>Легендарный трусливый воин\n \t\t\t\t\t\t<9>(Назад)" << endl;
+                            line();
+                            cout << "\n";
+                            cin >> multy;
+                            switch (multy) {
+                                case 0:
+                                    Worker::Print_Ant("Легендарный рабочий", 10, 6, 0, "Беатрикс", 'r');
+                                    goto start1;
+                                case 1:
+                                    Worker::Print_Ant("Обычный рабочий", 1, 0, 0, "Беатрикс", 'r');
+                                    goto start1;
+                                case 2:
+                                    Worker::Print_Ant("Старший спринтер рабочий", 2, 1, 0, "Беатрикс", 'r');
+                                    goto start1;
+                                case 3:
+                                    Warrior::Print_Ant("Обычный воин", 1, 0, 1, "Беатрикс", 'v');
+                                    goto start1;
+                                case 4:
+                                    Warrior::Print_Ant("Элитный воин", 8, 4, 5, "Беатрикс", 'v');
+                                    goto start1;
+                                case 5:
+                                    Warrior::Print_Ant("Легендарный трусливый воин", 10, 6, 4, "Беатрикс", 'v');
+                                    goto start1;
+                                case 9:
+                                    goto start;
+                                default:
+                                    break;
+                            }
+                            break;
+                        }
+                        case 2: {
+start12:
+                            line();
+                            cout << "\t<0>Обычный рабочий;\t<1>Элитный рабочий\t<2>Старший любимчик королевы рабочий\n\t<3>Элитный воин\t<4>Легендарный воин\t<5>Продвинутый мстительный воин\n \t\t\t\t\t\t<9>(Назад)" << endl;
+                            line();
+                            cout << "\n";
+                            cin >> multy2;
+                            switch (multy2) {
+                                case 0:
+                                    Worker::Print_Ant("Обычный рабочий", 1, 0, 0, "София", 'r');
+                                    goto start12;
+                                case 1:
+                                    Worker::Print_Ant("Элитный рабочий", 8, 4, 0, "София", 'r');
+                                    goto start12;
+                                case 2:
+                                    Worker::Print_Ant("Старший любимчик королевы рабочий", 2, 1, 0, "София", 'r');
+                                    goto start12;
+                                case 3:
+                                    Warrior::Print_Ant("Элитный воин", 8, 4, 5, "София", 'v');
+                                    goto start12;
+                                case 4:
+                                    Warrior::Print_Ant("Легендарный воин", 10, 6, 4, "София", 'v');
+                                    goto start12;
+                                case 5:
+                                    Warrior::Print_Ant("Продвинутый мстительный воин", 6, 2, 3, "София", 'v');
+                                    goto start12;
+                                case 9:
+                                    goto start;
+                                default:
+                                    break;
+                            }
+                            break;
+                        }
+                        case 9: {
+                            goto start0;
+                        }
+                        default:
+                            break;
+                    }
+                    break;
+                }
+                case 9: {
+                    break;
+                }
+                default:
+                    break;
+            }
+            if (FlagOut == 1)
+                int b = _getch();
         }
     }
-
-    size_t max = 0;
-    size_t i_max = 0;
-    for(size_t i = 0; i < vE.size(); ++i) {
-        if(vE.at(i)->sumResource() > max) {
-            max = vE.at(i)->sumResource();
-            i_max = i;
-        }
-    }
-    showWin(vE.at(i_max));
-}
-
-int main() {
-
-    SetConsoleOutputCP(CP_UTF8);
-
-    system("chcp 65001");
-
-    PrintWord("", '0', 1);
-
-    int n;
-    while(true) {
-        cout << "Введите день: ";
-        cin >> n;
-        if(n < 0) {
-            cout << "\nОшибка! Попробуйте снова.\n";
-        }
-        else break;
-    }
-    Q anna("Анна", 24, 8, 26);
-    anna.setFTChildren(1, 15);
-    anna.setFTDaught(2, 5);
-    anna.setFTPeriod(3, 3);
-    anna.setType(std::vector<Type_Worker>{senior_worker, ordinary_unique},
-                 std::vector<Type_Warrior>{ordinary_warrior, legendary_legend},
-                 std::vector<Type_Insect>{thick_legged});
-    newEmpire(anna, 10, 8, 1);
-
-    Q blanka("Бланка", 27, 7, 23);
-    blanka.setFTChildren(1, 15);
-    blanka.setFTDaught(1, 4);
-    blanka.setFTPeriod(3, 5);
-    blanka.setType(std::vector<Type_Worker>{ordinary_worker, advanced_sleepy},
-                   std::vector<Type_Warrior>{advanced, elite_anomal},
-                   std::vector<Type_Insect>{butterfly});
-    newEmpire(blanka, 11, 8, 1);
-
-    Q amaly("Амалия", 15, 8, 16);
-    amaly.setFTChildren(1, 15);
-    amaly.setFTDaught(2, 3);
-    amaly.setFTPeriod(3, 3);
-    amaly.setType(std::vector<Type_Worker>{ordinary_worker, usual_stocky},
-                   std::vector<Type_Warrior>{senior_warrior, usual_absent_minded},
-                   std::vector<Type_Insect>{wasp});
-    newEmpire(amaly, 12, 9, 1);
-
-    vH.push_back(Heap(28, 28, 0, 0));
-    vH.push_back(Heap(39, 0, 42, 0));
-    vH.push_back(Heap(45, 0, 0, 0));
-    vH.push_back(Heap(46, 0, 0, 25));
-    vH.push_back(Heap(29, 33, 0, 0));
-
-    startGame(n);
-
-     PrintWord("", '0', 1);
     return 0;
 }
-
-
-
-
